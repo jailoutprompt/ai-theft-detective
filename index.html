@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 도난탐정 — 무무익선</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0A0C10;color:#E5E7EB;font-family:-apple-system,'Apple SD Gothic Neo','Pretendard',sans-serif;min-height:100vh}
+.container{max-width:480px;margin:0 auto;padding:20px}
+.header{display:flex;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid rgba(255,255,255,0.06)}
+.header h1{font-size:18px;font-weight:700;color:#fff}
+.badge{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600}
+.badge-red{background:rgba(239,68,68,0.15);color:#EF4444}
+.badge-blue{background:rgba(99,102,241,0.15);color:#818CF8}
+.badge-green{background:rgba(52,211,153,0.15);color:#34D399}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#6366F1,#8B5CF6);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin:16px 0;background:rgba(255,255,255,0.03);border-radius:12px;padding:4px}
+.tab{flex:1;text-align:center;padding:10px;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;color:#6B7280;transition:all .2s}
+.tab.active{background:rgba(99,102,241,0.15);color:#818CF8}
+
+/* Sections */
+.section{display:none}
+.section.active{display:block}
+
+/* Form */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;color:#9CA3AF;font-size:12px;margin-bottom:6px}
+.form-group input,.form-group textarea,.form-group select{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;color:#E5E7EB;font-size:14px;outline:none}
+.form-group input:focus,.form-group textarea:focus{border-color:#6366F1}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* Buttons */
+.btn{width:100%;padding:14px;border-radius:12px;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-primary{background:#6366F1;color:#fff}
+.btn-primary:hover{background:#5558E6}
+.btn-danger{background:#EF4444;color:#fff}
+.btn-secondary{background:rgba(255,255,255,0.06);color:#D1D5DB}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+
+/* Cards */
+.card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:16px;margin-bottom:12px}
+.card-alert{background:rgba(239,68,68,0.04);border-color:rgba(239,68,68,0.15)}
+
+/* Scan animation */
+.scanning{text-align:center;padding:40px 20px}
+.scan-ring{width:80px;height:80px;margin:0 auto 20px;border:3px solid rgba(99,102,241,0.2);border-top-color:#6366F1;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scan-text{color:#818CF8;font-size:14px;margin-top:8px}
+.scan-platforms{display:flex;justify-content:center;gap:12px;margin-top:16px}
+.scan-platforms span{padding:4px 10px;background:rgba(255,255,255,0.04);border-radius:8px;font-size:11px;color:#6B7280}
+
+/* Results */
+.listing{display:flex;gap:12px;padding:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;margin-bottom:10px}
+.listing.suspicious{border-color:rgba(251,191,36,0.3);background:rgba(251,191,36,0.04)}
+.listing-img{width:64px;height:64px;background:rgba(255,255,255,0.05);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.listing-info{flex:1;min-width:0}
+.listing-info h4{color:#E5E7EB;font-size:13px;font-weight:500;margin-bottom:4px}
+.listing-info p{color:#6B7280;font-size:12px}
+.sim-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;margin-right:6px}
+.sim-high{background:rgba(239,68,68,0.2);color:#EF4444}
+.sim-medium{background:rgba(251,191,36,0.2);color:#FBBF24}
+.sim-low{background:rgba(255,255,255,0.08);color:#9CA3AF}
+
+/* Map placeholder */
+.map-box{background:#1a1d26;border-radius:12px;height:200px;position:relative;overflow:hidden;margin-top:10px}
+.map-dot{position:absolute;width:8px;height:8px;border-radius:50%;animation:pulse 2s infinite}
+.map-dot-red{background:#EF4444}
+.map-dot-blue{background:#38BDF8}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.5)}}
+
+/* Prediction */
+.pred-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.pred-fill{height:28px;border-radius:6px;display:flex;align-items:center;padding-left:10px;font-size:12px;font-weight:600;color:#fff}
+
+/* Report */
+.report-box{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;font-size:13px;white-space:pre-line;line-height:1.8;font-family:'Courier New',monospace}
+
+/* Step indicator */
+.steps{display:flex;gap:4px;margin:16px 0}
+.step{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.06)}
+.step.done{background:#6366F1}
+.step.current{background:#818CF8;animation:glow .8s ease-in-out infinite alternate}
+@keyframes glow{from{opacity:.5}to{opacity:1}}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.stat{background:rgba(255,255,255,0.03);border-radius:10px;padding:12px;text-align:center}
+.stat-value{font-size:20px;font-weight:700;color:#fff}
+.stat-label{font-size:11px;color:#6B7280;margin-top:4px}
+
+/* Nav */
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;justify-content:space-around;padding:12px 20px 28px;background:linear-gradient(transparent,#0A0C10 30%)}
+.nav-item{text-align:center;cursor:pointer;opacity:0.5}
+.nav-item.active{opacity:1}
+.nav-item p{font-size:10px;margin-top:4px}
+</style>
+</head>
+<body>
+
+<div class="container" style="padding-bottom:80px">
+  <div class="header">
+    <div class="logo-icon">🔍</div>
+    <h1>AI 도난탐정</h1>
+    <span class="badge badge-blue" id="statusBadge">대기 중</span>
+  </div>
+
+  <!-- 진행 단계 -->
+  <div class="steps" id="steps">
+    <div class="step" id="step1"></div>
+    <div class="step" id="step2"></div>
+    <div class="step" id="step3"></div>
+    <div class="step" id="step4"></div>
+    <div class="step" id="step5"></div>
+  </div>
+
+  <!-- 탭 -->
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('report')">도난 신고</div>
+    <div class="tab" onclick="showTab('scan')">매물 스캔</div>
+    <div class="tab" onclick="showTab('predict')">AI 분석</div>
+    <div class="tab" onclick="showTab('police')">신고서</div>
+  </div>
+
+  <!-- ① 도난 신고 -->
+  <div class="section active" id="sec-report">
+    <div class="card" style="margin-top:8px">
+      <h3 style="font-size:15px;margin-bottom:16px;color:#fff">📋 자전거 정보 입력</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>제조사/브랜드</label>
+          <input type="text" id="brand" placeholder="예: 스페셜라이즈드" value="스페셜라이즈드">
+        </div>
+        <div class="form-group">
+          <label>모델명</label>
+          <input type="text" id="model" placeholder="예: 알레 E5" value="알레 E5">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>색상</label>
+          <input type="text" id="color" placeholder="예: 매트 블랙" value="매트 블랙">
+        </div>
+        <div class="form-group">
+          <label>구매 가격</label>
+          <input type="text" id="price" placeholder="예: 1,200,000" value="1,200,000">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>특이사항 (스크래치, 스티커 등)</label>
+        <textarea id="features" rows="2" placeholder="예: 앞바퀴 좌측 스크래치">앞바퀴 좌측 스크래치, 안장 커스텀</textarea>
+      </div>
+      <div class="form-group">
+        <label>도난 장소</label>
+        <input type="text" id="location" placeholder="예: 서울시 성동구 왕십리로 24" value="서울시 성동구 왕십리로 24">
+      </div>
+      <button class="btn btn-danger" onclick="startScan()" id="scanBtn">🚨 도난 신고 + 중고마켓 스캔 시작</button>
+    </div>
+  </div>
+
+  <!-- ② 스캔 결과 -->
+  <div class="section" id="sec-scan">
+    <div id="scanningView" style="display:none">
+      <div class="scanning">
+        <div class="scan-ring"></div>
+        <p style="color:#fff;font-size:16px;font-weight:600">중고마켓 AI 스캔 중...</p>
+        <p class="scan-text" id="scanStatus">당근마켓 검색 중</p>
+        <div class="scan-platforms">
+          <span id="sp-daangn">🥕 당근마켓</span>
+          <span id="sp-bunjang">⚡ 번개장터</span>
+          <span id="sp-junggo">📦 중고나라</span>
+        </div>
+      </div>
+    </div>
+    <div id="resultsView" style="display:none">
+      <div class="stats-row">
+        <div class="stat"><div class="stat-value" id="statTotal">0</div><div class="stat-label">스캔 매물</div></div>
+        <div class="stat"><div class="stat-value" style="color:#EF4444" id="statSuspicious">0</div><div class="stat-label">의심 매물</div></div>
+        <div class="stat"><div class="stat-value" style="color:#FBBF24" id="statMax">0%</div><div class="stat-label">최고 유사도</div></div>
+      </div>
+      <p style="color:#6B7280;font-size:12px;margin-bottom:10px">유사도 높은 순 정렬</p>
+      <div id="listingsContainer"></div>
+    </div>
+  </div>
+
+  <!-- ③ AI 분석 -->
+  <div class="section" id="sec-predict">
+    <div class="card" style="margin-top:8px">
+      <h3 style="font-size:14px;color:#fff;margin-bottom:4px">🧠 도난범 이동 패턴 예측</h3>
+      <p style="color:#6B7280;font-size:11px;margin-bottom:14px">39만건 위치 데이터 기반 분석</p>
+      <div id="predictionsContainer">
+        <p style="color:#4B5563;text-align:center;padding:20px">도난 신고 후 분석됩니다</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="font-size:14px;color:#fff;margin-bottom:4px">📍 주변 CCTV 현황</h3>
+      <p style="color:#6B7280;font-size:11px;margin-bottom:8px">도난 지점 반경 200m</p>
+      <div class="map-box" id="cctvMap">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#4B5563;font-size:12px">지도 로딩 중...</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <div style="flex:1;background:rgba(56,189,248,0.06);border-radius:8px;padding:8px;text-align:center">
+          <p style="color:#38BDF8;font-size:16px;font-weight:700" id="cctvCount">-</p>
+          <p style="color:#6B7280;font-size:11px">CCTV 개소</p>
+        </div>
+        <div style="flex:1;background:rgba(52,211,153,0.06);border-radius:8px;padding:8px;text-align:center">
+          <p style="color:#34D399;font-size:16px;font-weight:700">200m</p>
+          <p style="color:#6B7280;font-size:11px">탐색 반경</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 신고서 -->
+  <div class="section" id="sec-police">
+    <div class="card" style="margin-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="font-size:14px;color:#fff">📄 112 자동 신고서</h3>
+        <span class="badge badge-green" id="reportStatus">준비 중</span>
+      </div>
+      <div class="report-box" id="reportContent">
+        도난 신고를 먼저 접수해주세요.
+      </div>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn btn-primary" onclick="copyReport()">📋 복사</button>
+        <button class="btn btn-secondary" onclick="printReport()">🖨️ 출력</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 하단 네비 -->
+<div class="nav">
+  <div class="nav-item active" onclick="showTab('report')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+    <p style="color:#818CF8">홈</p>
+  </div>
+  <div class="nav-item" onclick="showTab('scan')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <p>스캔</p>
+  </div>
+  <div class="nav-item" onclick="showTab('predict')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    <p>분석</p>
+  </div>
+  <div class="nav-item" onclick="showTab('police')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+    <p>신고서</p>
+  </div>
+</div>
+
+<script>
+let scanData = null;
+
+function showTab(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  event?.target?.classList?.add('active');
+}
+
+function updateSteps(current) {
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById('step' + i);
+    el.className = 'step';
+    if (i < current) el.classList.add('done');
+    if (i === current) el.classList.add('current');
+  }
+}
+
+async function startScan() {
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  btn.textContent = '🔄 스캔 중...';
+  btn.style.opacity = '0.6';
+
+  const statusBadge = document.getElementById('statusBadge');
+  statusBadge.textContent = '스캔 중';
+  statusBadge.className = 'badge badge-red';
+
+  updateSteps(1);
+
+  // 스캔 탭으로 이동
+  showTab('scan');
+  document.getElementById('scanningView').style.display = 'block';
+  document.getElementById('resultsView').style.display = 'none';
+
+  // 스캔 애니메이션
+  const scanStatus = document.getElementById('scanStatus');
+  const platforms = ['당근마켓 검색 중...', '번개장터 검색 중...', '중고나라 검색 중...', 'AI 유사도 분석 중...'];
+
+  let idx = 0;
+  const interval = setInterval(() => {
+    if (idx < platforms.length) {
+      scanStatus.textContent = platforms[idx];
+      if (idx === 0) document.getElementById('sp-daangn').style.color = '#FBBF24';
+      if (idx === 1) { document.getElementById('sp-daangn').style.color = '#34D399'; document.getElementById('sp-bunjang').style.color = '#FBBF24'; }
+      if (idx === 2) { document.getElementById('sp-bunjang').style.color = '#34D399'; document.getElementById('sp-junggo').style.color = '#FBBF24'; }
+      if (idx === 3) { document.getElementById('sp-junggo').style.color = '#34D399'; }
+      idx++;
+    }
+  }, 800);
+
+  // API 호출
+  const body = {
+    brand: document.getElementById('brand').value,
+    model: document.getElementById('model').value,
+    color: document.getElementById('color').value,
+    price: document.getElementById('price').value,
+    features: document.getElementById('features').value,
+    location: document.getElementById('location').value,
+  };
+
+  try {
+    const resp = await fetch('/api/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    scanData = await resp.json();
+  } catch (e) {
+    // Offline fallback
+    scanData = {
+      report_id: 'ATD-DEMO-001',
+      stolen_info: body,
+      scan_results: [
+        { platform: '당근마켓', title: '스페셜라이즈드 알레 급처', price: '450,000원', location: '성남시 분당구', time: '32분 전', similarity: 94 },
+        { platform: '번개장터', title: '로드바이크 거의 새것 판매', price: '380,000원', location: '수원시 영통구', time: '1시간 전', similarity: 81 },
+        { platform: '중고나라', title: '자전거 중고 팝니다 직거래', price: '300,000원', location: '안양시 동안구', time: '2시간 전', similarity: 73 },
+      ],
+      total_scanned: 47,
+      suspicious_count: 3,
+      police_station: '성동경찰서 (02-2204-0112)',
+    };
+  }
+
+  clearInterval(interval);
+
+  // 결과 표시
+  setTimeout(() => {
+    updateSteps(3);
+    statusBadge.textContent = '매물 발견!';
+    statusBadge.className = 'badge badge-red';
+
+    document.getElementById('scanningView').style.display = 'none';
+    document.getElementById('resultsView').style.display = 'block';
+
+    const results = scanData.scan_results;
+    document.getElementById('statTotal').textContent = scanData.total_scanned || results.length;
+    document.getElementById('statSuspicious').textContent = scanData.suspicious_count || results.filter(r => r.similarity >= 70).length;
+    document.getElementById('statMax').textContent = (results[0]?.similarity || 0) + '%';
+
+    const container = document.getElementById('listingsContainer');
+    container.innerHTML = '';
+    results.forEach(item => {
+      const simClass = item.similarity >= 80 ? 'sim-high' : item.similarity >= 50 ? 'sim-medium' : 'sim-low';
+      const suspicious = item.similarity >= 70 ? 'suspicious' : '';
+      container.innerHTML += `
+        <div class="listing ${suspicious}">
+          <div class="listing-img">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4B5563" stroke-width="1.5"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6l-4 11h-2"/><path d="M5.5 17.5L11 6h4l4 11.5"/></svg>
+          </div>
+          <div class="listing-info">
+            <div style="margin-bottom:4px">
+              <span class="sim-badge ${simClass}">${item.similarity}%</span>
+              <span style="color:${item.platform === '당근마켓' ? '#FF6F0F' : item.platform === '번개장터' ? '#FF0048' : '#1EC800'};font-size:10px">${item.platform}</span>
+            </div>
+            <h4>${item.title}</h4>
+            <p>${item.price} / ${item.location}</p>
+            <p style="font-size:11px;color:#4B5563">${item.time}</p>
+          </div>
+        </div>
+      `;
+    });
+
+    // AI 분석 데이터 로드
+    loadPredictions();
+    loadCCTV();
+    generateReport();
+
+    btn.disabled = false;
+    btn.textContent = '🚨 도난 신고 + 중고마켓 스캔 시작';
+    btn.style.opacity = '1';
+  }, 3500);
+}
+
+async function loadPredictions() {
+  updateSteps(4);
+  let data;
+  try {
+    const resp = await fetch('/api/predict-movement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ location: scanData?.stolen_info?.location || '' }),
+    });
+    data = await resp.json();
+  } catch {
+    data = {
+      predictions: [
+        { area: '성남 중고시장', probability: 78, type: '중고거래' },
+        { area: '수원 영통', probability: 45, type: '중고거래' },
+        { area: '안양 평촌', probability: 23, type: '유동인구' },
+      ],
+      data_basis: '39만건 위치 데이터 분석',
+    };
+  }
+
+  const container = document.getElementById('predictionsContainer');
+  const colors = ['#EF4444', '#FBBF24', '#6B7280'];
+  container.innerHTML = data.predictions.map((p, i) => `
+    <div class="pred-bar">
+      <div style="width:60px;font-size:12px;color:#9CA3AF">${p.area}</div>
+      <div style="flex:1">
+        <div class="pred-fill" style="width:${p.probability}%;background:${colors[i]}">${p.probability}%</div>
+      </div>
+    </div>
+  `).join('');
+  container.innerHTML += `<p style="color:#4B5563;font-size:11px;margin-top:8px;text-align:right">${data.data_basis}</p>`;
+}
+
+async function loadCCTV() {
+  let data;
+  try {
+    const resp = await fetch('/api/cctv?lat=37.5665&lng=126.978');
+    data = await resp.json();
+  } catch {
+    data = { cctvs: Array.from({length: 14}, (_, i) => ({ id: i, lat: 37.5665 + (Math.random()-0.5)*0.004, lng: 126.978 + (Math.random()-0.5)*0.004 })), total: 14 };
+  }
+
+  document.getElementById('cctvCount').textContent = data.total;
+
+  const map = document.getElementById('cctvMap');
+  map.innerHTML = '';
+  // 도난 지점 (빨간 점)
+  map.innerHTML += '<div class="map-dot map-dot-red" style="top:50%;left:50%;transform:translate(-50%,-50%)"></div>';
+  // 반경 원
+  map.innerHTML += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:160px;height:160px;border:1.5px dashed rgba(56,189,248,0.3);border-radius:50%"></div>';
+  // CCTV 점들
+  data.cctvs.forEach(c => {
+    const top = 20 + Math.random() * 60;
+    const left = 10 + Math.random() * 80;
+    map.innerHTML += `<div class="map-dot map-dot-blue" style="top:${top}%;left:${left}%"></div>`;
+  });
+  map.innerHTML += '<p style="position:absolute;bottom:6px;right:8px;color:#4B5563;font-size:10px">도난 지점 기준 200m 반경</p>';
+}
+
+async function generateReport() {
+  updateSteps(5);
+  document.getElementById('reportStatus').textContent = '생성 완료';
+
+  let reportText;
+  try {
+    const resp = await fetch('/api/generate-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        report_id: scanData?.report_id,
+        stolen_info: scanData?.stolen_info,
+        suspicious_count: scanData?.suspicious_count,
+        max_similarity: scanData?.scan_results?.[0]?.similarity || 0,
+      }),
+    });
+    const data = await resp.json();
+    reportText = data.report_text;
+  } catch {
+    const s = scanData?.stolen_info || {};
+    reportText = `━━━ 자전거 도난 신고서 (자동 생성) ━━━\n\n■ 사건번호: ${scanData?.report_id || 'DEMO'}\n■ 제조사: ${s.brand || '-'} ${s.model || '-'}\n■ 색상: ${s.color || '-'}\n■ 도난 장소: ${s.location || '-'}\n■ 의심 매물: ${scanData?.suspicious_count || 0}건\n\n※ AI 도난탐정에 의해 자동 생성`;
+  }
+
+  document.getElementById('reportContent').textContent = reportText;
+}
+
+function copyReport() {
+  const text = document.getElementById('reportContent').textContent;
+  navigator.clipboard.writeText(text).then(() => alert('신고서가 클립보드에 복사되었습니다.'));
+}
+
+function printReport() {
+  const text = document.getElementById('reportContent').textContent;
+  const w = window.open('', '_blank');
+  w.document.write(`<pre style="font-family:monospace;padding:40px;line-height:2">${text}</pre>`);
+  w.print();
+}
+</script>
+</body>
+</html>
