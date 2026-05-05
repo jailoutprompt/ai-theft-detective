@@ -439,15 +439,27 @@ async function startScan() {
     const sims = results.slice(0, 3).map(r => r.similarity + '%').join(' / ');
     document.getElementById('similarityText').textContent = `유사도 ${sims}`;
 
-    // 매물 결과
+    // 매물 결과 + AI 추정 disclaimer 배너
     const container = document.getElementById('listingsContainer');
     container.innerHTML = '';
+
+    // [v3 추가] disclaimer 고정 배너 (명예훼손 차단 — T4 빅 리스크)
+    if (scanData.disclaimer) {
+      container.innerHTML += `
+        <div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#FBBF24;line-height:1.5;">
+          ⚠️ <strong>${scanData.disclaimer}</strong>
+        </div>`;
+    }
+
     results.forEach(item => {
       const simClass = item.similarity >= 80 ? 'sim-high' : item.similarity >= 50 ? 'sim-medium' : 'sim-low';
       const suspicious = item.similarity >= 70 ? 'suspicious' : '';
       const imgHtml = item.image
         ? `<img src="${item.image}" alt="" onerror="this.style.display='none'">`
         : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4B5563" stroke-width="1.5"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6l-4 11h-2"/><path d="M5.5 17.5L11 6h4l4 11.5"/></svg>`;
+      // [v3 추가] AI 추정 라벨 + warning
+      const aiLabel = item.is_ai_estimate ? `<span style="background:rgba(139,92,246,0.15);color:#A78BFA;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;">AI 추정</span>` : '';
+      const warningHtml = item.warning ? `<p style="color:#FBBF24;font-size:10px;margin-top:3px;line-height:1.4;">${item.warning}</p>` : '';
       container.innerHTML += `
         <div class="listing ${suspicious}">
           <div class="listing-img">${imgHtml}</div>
@@ -455,10 +467,12 @@ async function startScan() {
             <div style="margin-bottom:3px">
               <span class="sim-badge ${simClass}">${item.similarity}%</span>
               <span style="color:${item.platform==='당근마켓'?'#FF6F0F':item.platform==='번개장터'?'#FF0048':'#1EC800'};font-size:10px">${item.platform}</span>
+              ${aiLabel}
             </div>
             <p style="color:#E5E7EB;font-size:12px;font-weight:500">${item.title}</p>
             <p style="color:#6B7280;font-size:11px">${item.price} / ${item.location}</p>
             <p style="color:#4B5563;font-size:10px">${item.time}</p>
+            ${warningHtml}
           </div>
         </div>`;
     });

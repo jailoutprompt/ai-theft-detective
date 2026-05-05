@@ -15,6 +15,12 @@ import re
 from datetime import datetime
 from typing import Optional
 
+# ============================================================
+# Threshold 상수 (Phase 4 code-reviewer 적발 보강)
+# ============================================================
+SUSPICIOUS_THRESHOLD = 70   # 의심 매물 카운트 기준 (>= 이상)
+AI_ESTIMATE_THRESHOLD = 80  # warning 라벨 기준 (< 미만)
+
 app = FastAPI(title="AI 도난탐정 MVP")
 
 app.add_middleware(
@@ -35,7 +41,7 @@ MOCK_LISTINGS = [
         "location": "성남시 분당구",
         "time": "32분 전",
         "similarity": 94,
-        "url": "https://www.daangn.com/articles/example1",
+        "url": "https://example.com/daangn/article-001",
         "image": None,
     },
     {
@@ -45,7 +51,7 @@ MOCK_LISTINGS = [
         "location": "수원시 영통구",
         "time": "1시간 전",
         "similarity": 81,
-        "url": "https://m.bunjang.co.kr/products/example2",
+        "url": "https://example.com/bunjang/product-002",
         "image": None,
     },
     {
@@ -55,7 +61,7 @@ MOCK_LISTINGS = [
         "location": "안양시 동안구",
         "time": "2시간 전",
         "similarity": 73,
-        "url": "https://cafe.naver.com/joonggonara/example3",
+        "url": "https://example.com/joongna/post-003",
         "image": None,
     },
 ]
@@ -216,6 +222,9 @@ async def create_report(request: Request):
     for listing in all_results:
         if listing["similarity"] == 0:
             listing["similarity"] = calculate_similarity(stolen_info, listing)
+        listing["is_ai_estimate"] = True
+        if listing["similarity"] < AI_ESTIMATE_THRESHOLD:
+            listing["warning"] = "[주의] AI 추정치 — 실제 도난품 아닐 수 있음. 직접 확인 필수"
 
     # 유사도 높은 순 정렬
     all_results.sort(key=lambda x: x["similarity"], reverse=True)
@@ -227,8 +236,10 @@ async def create_report(request: Request):
         "scan_results": all_results[:10],
         "scan_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "total_scanned": len(all_results),
-        "suspicious_count": len([r for r in all_results if r["similarity"] >= 70]),
+        "suspicious_count": len([r for r in all_results if r["similarity"] >= SUSPICIOUS_THRESHOLD]),
+        "max_similarity": max((r["similarity"] for r in all_results), default=0),
         "police_station": get_nearest_police(stolen_info.get("location", "")),
+        "disclaimer": "본 결과는 AI 추정이며 법적 효력 X. 실제 신고는 112 / 관할 경찰서 통해 진행하세요.",
     }
 
     return JSONResponse(report)
@@ -280,6 +291,11 @@ async def generate_police_report(request: Request):
   - 중고마켓 스캔: 3개 플랫폼 (당근마켓, 번개장터, 중고나라)
   - 의심 매물: {data.get('suspicious_count', 0)}건 발견
   - 최고 유사도: {data.get('max_similarity', 0)}%
+
+[주의] AI 추정 라벨 (필독)
+  - 본 분석은 AI 자동 추정. 오탐 가능성 존재
+  - 매물 = 동일 도난품 단정 X
+  - 직접 매물 확인·경찰 신고 후 판단
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 본 신고서는 AI 도난탐정 서비스에 의해 자동 생성되었습니다.
