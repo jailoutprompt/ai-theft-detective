@@ -1,0 +1,51 @@
+# fly.toml — AI 도난탐정 Fly.io 배포 설정
+# 앱: noeullim-theft-ai | 리전: nrt (도쿄)
+
+app = "noeullim-theft-ai"
+primary_region = "nrt"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8000"
+  PYTHONUNBUFFERED = "1"
+
+# 환경변수 (실제 값은 fly secrets set 으로 주입 — 절대 여기 입력 X)
+# fly secrets set OPENAI_API_KEY=sk-...
+# fly secrets set PUBLIC_DATA_API_KEY=...
+# fly secrets set RESEND_API_KEY=re_...
+# fly secrets set SITE_URL=https://noeullim-theft-ai.fly.dev
+
+[[mounts]]
+  source      = "data"
+  destination = "/app/data"
+  # SQLite 영속 볼륨 (ephemeral disk 방지)
+  # 생성: fly volumes create data --size 1 --region nrt
+
+[http_service]
+  internal_port       = 8000
+  force_https         = true
+  auto_stop_machines  = true   # 트래픽 없을 때 머신 슬립 (무료 티어 절약)
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type       = "requests"
+    hard_limit = 50
+    soft_limit = 25
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
+
+[checks]
+  [checks.health]
+    grace_period = "10s"
+    interval     = "30s"
+    method       = "GET"
+    path         = "/health"
+    port         = 8000
+    timeout      = "5s"
+    type         = "http"

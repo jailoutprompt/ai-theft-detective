@@ -3,3 +3,7 @@ uvicorn[standard]
 httpx
 beautifulsoup4
 jinja2
+apscheduler
+reportlab
+sqlalchemy>=2.0
+slowapi

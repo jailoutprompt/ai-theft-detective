@@ -14,3 +14,10 @@ venv/
 # IDE
 .vscode/
 .idea/
+
+# Auto-added 2026-05-15 (베타 운영화)
+data/
+*.db
+*.jsonl
+*.migrated
+.env
