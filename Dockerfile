@@ -20,6 +20,9 @@ COPY . .
 # /app/data 디렉토리 생성 (볼륨 마운트 전 초기화)
 RUN mkdir -p /app/data
 
+# 공공데이터 CCTV 조회 DB 생성 (data_src/cctv_kr.csv.gz -> data/cctv.db)
+RUN python3 scripts/build_cctv_db.py
+
 EXPOSE 8000
 
 # 헬스체크 (Fly.io checks와 동일 경로)

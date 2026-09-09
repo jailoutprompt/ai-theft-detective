@@ -27,6 +27,9 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+# 공공데이터 기반 서비스 모듈
+from services import cctv_service, movement_service, report_service
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
@@ -836,10 +839,17 @@ async def get_cctv_nearby(request: Request):
     cctvs: list = []
     source = "mock"
 
-    if PUBLIC_DATA_API_KEY:
+    # 1순위: 공공데이터 전국 CCTV DB (377,243건)
+    if cctv_service.db_available():
+        cctvs = cctv_service.find_nearby(lat, lng, radius_m=radius_m, limit=30)
+        if cctvs:
+            source = "public_data"
+
+    # 2순위: 서울 열린데이터광장 API
+    if not cctvs and PUBLIC_DATA_API_KEY:
         cctvs = await _fetch_seoul_cctv(lat, lng, radius_km)
         if cctvs:
-            source = "real"
+            source = "seoul_api"
 
     if not cctvs:
         all_mock = _load_mock_cctvs()
@@ -868,17 +878,13 @@ async def get_cctv_nearby(request: Request):
 
 
 @app.get("/api/cctv/access-guide")
-async def get_cctv_access_guide():
-    with open(CCTV_MOCK_FILE, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    guide = data.get("access_guide", {})
-    return JSONResponse({
-        "steps": guide.get("steps", []),
-        "tips": guide.get("tips", []),
-        "legal_basis": "개인정보 보호법 제35조 (개인정보 열람권)",
-        "retention_days": "공공 CCTV 저장 기간: 통상 30일 (최대 90일)",
-        "contact": "관할 경찰서 민원실 또는 112",
-    })
+async def get_cctv_access_guide(lat: Optional[float] = None, lng: Optional[float] = None,
+                                radius: int = 200):
+    """열람 절차 안내. 좌표가 주어지면 관할 기관·보관기간을 반영한다."""
+    cctvs = []
+    if lat is not None and lng is not None and cctv_service.db_available():
+        cctvs = cctv_service.find_nearby(float(lat), float(lng), radius_m=radius, limit=20)
+    return JSONResponse(cctv_service.access_guide(cctvs))
 
 
 @app.post("/api/generate-report")
@@ -1167,24 +1173,42 @@ async def generate_112_pdf(request: Request):
 
 
 # ============================================================
-# 이동 패턴 예측 (데모용)
+# 이동 패턴 예측
+#   거리 감쇠 x 중고거래 거점 가중치 x 경과시간 기반 규칙 산출
 # ============================================================
 @app.post("/api/predict-movement")
 async def predict_movement(request: Request):
     data = await request.json()
-    location = data.get("location", "")
+    lat = data.get("lat")
+    lng = data.get("lng")
+    hours = float(data.get("hours_elapsed", 24) or 24)
 
-    predictions = [
-        {"area": "성남 중고시장", "probability": 78, "distance": "12km", "type": "중고거래"},
-        {"area": "수원 영통",    "probability": 45, "distance": "25km", "type": "중고거래"},
-        {"area": "안양 평촌",    "probability": 23, "distance": "18km", "type": "유동인구"},
-    ]
+    if lat is None or lng is None:
+        return JSONResponse(
+            {"error": "lat, lng 좌표가 필요합니다.", "predictions": []},
+            status_code=400,
+        )
 
-    return JSONResponse({
-        "predictions": predictions,
-        "data_basis": "39만건 위치 데이터 분석",
-        "model": "bicycle_theft_risk_model v1.0",
-    })
+    result = movement_service.predict(float(lat), float(lng), hours_elapsed=hours)
+    return JSONResponse(result)
+
+
+@app.post("/api/evidence-pack")
+@limiter.limit("20/hour")
+async def evidence_pack(request: Request):
+    """도난 좌표 기준 CCTV·수색지역·체크리스트를 한 번에 생성 (신고 자동화)"""
+    data = await request.json()
+    lat = data.get("lat")
+    lng = data.get("lng")
+    if lat is None or lng is None:
+        return JSONResponse({"error": "lat, lng 좌표가 필요합니다."}, status_code=400)
+
+    pack = report_service.build_evidence_pack(
+        float(lat), float(lng),
+        stolen_time=data.get("stolen_time"),
+        radius_m=int(data.get("radius", 200)),
+    )
+    return JSONResponse(pack)
 
 
 # ============================================================
@@ -1317,6 +1341,13 @@ async def send_listing_alert(case_id: str, listings: list):
 @app.get("/", response_class=HTMLResponse)
 async def index():
     with open("index.html", "r") as f:
+        return f.read()
+
+
+@app.get("/app", response_class=HTMLResponse)
+async def app_view():
+    _path = os.path.join(os.path.dirname(__file__), "public", "app.html")
+    with open(_path, "r", encoding="utf-8") as f:
         return f.read()
 
 
