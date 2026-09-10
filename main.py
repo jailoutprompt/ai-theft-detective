@@ -402,6 +402,16 @@ def reschedule_case(case_id: str, reported_at_dt: datetime):
 async def startup_event():
     init_db()
     migrate_json_to_sqlite()
+
+    # CCTV 조회 DB가 없으면 저장소 데이터에서 생성
+    # (Render 대시보드 Build Command 설정과 무관하게 동작하도록 보장)
+    try:
+        if not cctv_service.db_available():
+            from scripts.build_cctv_db import build as _build_cctv
+            _build_cctv()
+    except Exception as e:
+        print(f"[CCTV DB] 생성 실패 — 공공데이터 조회 비활성: {e}")
+
     scheduler.start()
 
     # DB에서 active 케이스 스케줄 복원 (jobstore에 없는 것만)
@@ -783,8 +793,14 @@ def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 
 
 def _load_mock_cctvs() -> list:
-    with open(CCTV_MOCK_FILE, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    # data/ 는 배포 환경에 없을 수 있음 (gitignore 대상)
+    if not os.path.exists(CCTV_MOCK_FILE):
+        return []
+    try:
+        with open(CCTV_MOCK_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return []
     cctvs = []
     for region in data.get("regions", {}).values():
         cctvs.extend(region.get("cctvs", []))
