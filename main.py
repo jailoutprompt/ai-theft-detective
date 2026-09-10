@@ -1381,6 +1381,14 @@ async def terms():
         return f.read()
 
 
+@app.get("/verify", response_class=HTMLResponse)
+async def verify_page():
+    """자체개발 기능 검증 페이지 (CCTV · 이동패턴 · 신고자동화)"""
+    _path = os.path.join(os.path.dirname(__file__), "public", "verify.html")
+    with open(_path, "r", encoding="utf-8") as f:
+        return f.read()
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

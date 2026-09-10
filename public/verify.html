@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>기능 검증 — AI 도난탐정</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+       background:#fff;color:#111;padding:28px 20px 60px;line-height:1.6}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:20px;margin-bottom:4px}
+  .sub{color:#666;font-size:13px;margin-bottom:22px}
+  .ctl{border:1px solid #ddd;padding:14px 16px;margin-bottom:22px;background:#fafafa}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  label{display:block;font-size:12px;color:#555;margin-bottom:3px}
+  input,select{border:1px solid #ccc;padding:7px 9px;font-size:13px;font-family:inherit;background:#fff}
+  button{border:1px solid #111;background:#111;color:#fff;padding:8px 16px;
+         font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{background:#333}
+  button.ghost{background:#fff;color:#111}
+  .preset{font-size:12px;padding:5px 10px;border:1px solid #bbb;background:#fff;color:#333}
+  .card{border:1px solid #ddd;margin-bottom:20px}
+  .card h2{font-size:14px;padding:11px 15px;background:#f2f2f2;border-bottom:1px solid #ddd;font-weight:600}
+  .card .api{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#666;font-weight:400;margin-left:6px}
+  .body{padding:15px}
+  .kv{display:flex;gap:8px;font-size:13px;padding:4px 0;border-bottom:1px solid #f0f0f0}
+  .kv b{min-width:120px;color:#555;font-weight:500}
+  table{border-collapse:collapse;width:100%;font-size:12.5px;margin-top:8px}
+  th,td{border:1px solid #e2e2e2;padding:6px 9px;text-align:left}
+  th{background:#f7f7f7;font-weight:600}
+  .bar{height:7px;background:#111;display:inline-block;vertical-align:middle;margin-right:6px}
+  .muted{color:#888;font-size:12px}
+  .tag{display:inline-block;font-size:11px;border:1px solid #999;padding:1px 6px;margin-left:5px;color:#555}
+  pre{background:#f7f7f7;border:1px solid #e2e2e2;padding:10px;font-size:11px;
+      overflow-x:auto;margin-top:8px;max-height:220px}
+  .loading{color:#888;font-size:13px}
+  .err{color:#c00;font-size:13px}
+  details{margin-top:8px}
+  summary{font-size:12px;color:#666;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>자체개발 기능 검증</h1>
+  <div class="sub">AI 도난탐정 · 좌표를 바꿔가며 실제 서버 응답을 확인할 수 있습니다.</div>
+
+  <div class="ctl">
+    <div class="row">
+      <div><label>위도</label><input id="lat" value="37.4979" size="10"></div>
+      <div><label>경도</label><input id="lng" value="127.0276" size="10"></div>
+      <div><label>반경(m)</label><input id="rad" value="200" size="6"></div>
+      <div><label>도난 후 경과(시간)</label><input id="hrs" value="24" size="6"></div>
+      <button onclick="runAll()">조회 실행</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <span class="muted">예시 위치:</span>
+      <button class="preset" onclick="setLoc(37.4979,127.0276)">서울 강남역</button>
+      <button class="preset" onclick="setLoc(37.5665,126.9780)">서울시청</button>
+      <button class="preset" onclick="setLoc(35.1578,129.0596)">부산 서면</button>
+      <button class="preset" onclick="setLoc(35.2285,128.8894)">김해시청</button>
+      <button class="preset" onclick="setLoc(35.8797,128.5990)">대구 칠성시장</button>
+      <button class="preset ghost" onclick="useGeo()">현재 위치</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>1. CCTV 조회<span class="api">POST /api/cctv/nearby</span></h2>
+    <div class="body" id="c1"><span class="muted">조회 실행을 눌러주세요.</span></div>
+  </div>
+
+  <div class="card">
+    <h2>2. 이동패턴 예측<span class="api">POST /api/predict-movement</span></h2>
+    <div class="body" id="c2"><span class="muted">조회 실행을 눌러주세요.</span></div>
+  </div>
+
+  <div class="card">
+    <h2>3. 신고 자동화 · 증거팩<span class="api">POST /api/evidence-pack</span></h2>
+    <div class="body" id="c3"><span class="muted">조회 실행을 눌러주세요.</span></div>
+  </div>
+
+  <div class="muted" style="margin-top:24px">
+    데이터 출처: 공공데이터포털 「전국 CCTV 표준데이터」 377,243건 (좌표 유효 100%)<br>
+    이동패턴 예측은 거리감쇠 × 중고거래 거점 가중치 × 경과시간 기반 규칙 산출이며, 통계적 발생 확률이 아닌 상대 순위 지표입니다.
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+function setLoc(la, lo){ $('lat').value = la; $('lng').value = lo; runAll(); }
+function useGeo(){
+  navigator.geolocation.getCurrentPosition(
+    p => setLoc(p.coords.latitude.toFixed(4), p.coords.longitude.toFixed(4)),
+    () => alert('위치 권한이 거부되었습니다.'));
+}
+async function post(url, body){
+  const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'},
+                             body: JSON.stringify(body)});
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+function esc(s){ return String(s??'').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+
+async function runAll(){
+  const lat = parseFloat($('lat').value), lng = parseFloat($('lng').value);
+  const rad = parseInt($('rad').value) || 200, hrs = parseFloat($('hrs').value) || 24;
+  ['c1','c2','c3'].forEach(id => $(id).innerHTML = '<span class="loading">조회 중…</span>');
+
+  // 1. CCTV
+  try{
+    const d = await post('/api/cctv/nearby', {lat, lng, radius: rad});
+    const list = d.cctvs || [];
+    let h = `<div class="kv"><b>데이터 출처</b><span>${esc(d.source)}<span class="tag">${d.source==='public_data'?'공공데이터 실측':'폴백'}</span></span></div>`;
+    h += `<div class="kv"><b>반경 ${rad}m 내</b><span>${list.length}개소</span></div>`;
+    if(list.length){
+      h += '<table><tr><th>거리</th><th>설치목적</th><th>대수</th><th>보관</th><th>관리기관</th><th>소재지</th></tr>';
+      list.slice(0,10).forEach(c => {
+        h += `<tr><td>${c.distance_m}m</td><td>${esc(c.purpose)}</td><td>${c.cameras??'-'}</td>`
+           + `<td>${c.retention_days??'-'}일</td><td>${esc(c.agency)}</td><td>${esc((c.address||'').slice(0,30))}</td></tr>`;
+      });
+      h += '</table>';
+      if(list.length>10) h += `<div class="muted" style="margin-top:6px">상위 10개소만 표시 (전체 ${list.length}개소)</div>`;
+    }
+    h += `<details><summary>원본 응답 보기</summary><pre>${esc(JSON.stringify(d,null,1).slice(0,2500))}</pre></details>`;
+    $('c1').innerHTML = h;
+  }catch(e){ $('c1').innerHTML = `<span class="err">실패: ${esc(e.message)}</span>`; }
+
+  // 2. 이동패턴
+  try{
+    const d = await post('/api/predict-movement', {lat, lng, hours_elapsed: hrs});
+    let h = `<div class="kv"><b>경과 시간</b><span>${hrs}시간</span></div>`;
+    h += `<div class="kv"><b>탐색 반경</b><span>${d.search_radius_km}km</span></div>`;
+    h += `<div class="kv"><b>산출 방식</b><span>${esc(d.method||'-')}</span></div>`;
+    if(d.formula) h += `<div class="kv"><b>계산식</b><span style="font-family:monospace;font-size:11.5px">${esc(d.formula)}</span></div>`;
+    const ps = d.predictions || [];
+    if(ps.length){
+      h += '<table><tr><th>우선 수색 지역</th><th>거리</th><th>상대 순위</th></tr>';
+      ps.forEach(p => {
+        h += `<tr><td>${esc(p.area)}</td><td>${p.distance_km}km</td>`
+           + `<td><span class="bar" style="width:${p.probability*1.6}px"></span>${p.probability}%</td></tr>`;
+      });
+      h += '</table>';
+    } else {
+      h += `<div class="muted">${esc(d.note||'해당 반경 내 거점 없음')}</div>`;
+    }
+    if(d.disclaimer) h += `<div class="muted" style="margin-top:8px">${esc(d.disclaimer)}</div>`;
+    $('c2').innerHTML = h;
+  }catch(e){ $('c2').innerHTML = `<span class="err">실패: ${esc(e.message)}</span>`; }
+
+  // 3. 증거팩
+  try{
+    const st = new Date(Date.now() - hrs*3600*1000);
+    const pad = n => String(n).padStart(2,'0');
+    const stolen = `${st.getFullYear()}-${pad(st.getMonth()+1)}-${pad(st.getDate())} ${pad(st.getHours())}:${pad(st.getMinutes())}`;
+    const d = await post('/api/evidence-pack', {lat, lng, stolen_time: stolen, radius: rad});
+    const c = d.cctv || {};
+    let h = `<div class="kv"><b>도난 추정 시각</b><span>${esc(stolen)} (${d.hours_elapsed}시간 전)</span></div>`;
+    h += `<div class="kv"><b>확보 가능 CCTV</b><span>${c.count}개소 / 카메라 ${c.total_cameras}대</span></div>`;
+    if(c.request_deadline)
+      h += `<div class="kv"><b>열람 신청 마감</b><span>${esc(c.request_deadline)} — 잔여 ${c.days_left}일 <span class="tag">보관 ${c.min_retention_days}일 역산</span></span></div>`;
+    if(c.request_window)
+      h += `<div class="kv"><b>영상 요청 구간</b><span>${esc(c.request_window.from)} ~ ${esc(c.request_window.to)}</span></div>`;
+    if((c.agencies||[]).length){
+      h += '<table><tr><th>관할 기관</th><th>연락처</th><th>보유</th><th>최단거리</th></tr>';
+      c.agencies.slice(0,5).forEach(a => {
+        h += `<tr><td>${esc(a.agency)}</td><td>${esc(a.tel||'-')}</td><td>${a.count}개소</td><td>${a.nearest_m}m</td></tr>`;
+      });
+      h += '</table>';
+    }
+    if((d.search_areas||[]).length){
+      h += `<div class="kv" style="margin-top:10px"><b>우선 수색 지역</b><span>`
+         + d.search_areas.slice(0,3).map(a => `${esc(a.area)} ${a.probability}%`).join(' · ') + '</span></div>';
+    }
+    if((d.checklist||[]).length){
+      h += '<div style="margin-top:10px"><b style="font-size:13px">신고 전 확보 항목</b><table>';
+      d.checklist.forEach(i => {
+        h += `<tr><td style="width:46%">${i.urgent?'<b>[긴급] </b>':''}${esc(i.item)}</td><td class="muted">${esc(i.why)}</td></tr>`;
+      });
+      h += '</table></div>';
+    }
+    $('c3').innerHTML = h;
+  }catch(e){ $('c3').innerHTML = `<span class="err">실패: ${esc(e.message)}</span>`; }
+}
+runAll();
+</script>
+</body>
+</html>
