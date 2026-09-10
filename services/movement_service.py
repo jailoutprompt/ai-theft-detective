@@ -84,20 +84,27 @@ def predict(lat: float, lng: float, hours_elapsed: float = 24.0,
             "note": "탐색 반경 내 중고거래 거점이 없습니다. 반경을 넓히거나 인접 지역을 직접 지정하십시오.",
         }
 
-    total = sum(s["_score"] for s in scored) or 1.0
     scored.sort(key=lambda s: s["_score"], reverse=True)
+    top = scored[:top_n]
+
+    # 반환 대상(top_n) 기준으로 정규화해야 합이 100%가 된다.
+    total = sum(s["_score"] for s in top) or 1.0
 
     out = []
-    for s in scored[:top_n]:
-        prob = round(s["_score"] / total * 100)
+    for s in top:
         out.append({
             "area": s["area"],
             "lat": s["lat"],
             "lng": s["lng"],
             "distance_km": s["distance_km"],
-            "probability": prob,
+            "probability": round(s["_score"] / total * 100),
             "basis": f"거리 {s['distance_km']}km · 탐색반경 {round(search_radius,1)}km 내 상대 순위",
         })
+
+    # 반올림 오차를 1순위에 흡수시켜 합계를 100%로 맞춘다.
+    if out:
+        gap = 100 - sum(o["probability"] for o in out)
+        out[0]["probability"] += gap
 
     return {
         "predictions": out,

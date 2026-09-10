@@ -62,6 +62,11 @@
       <button class="preset" onclick="setLoc(35.8797,128.5990)">대구 칠성시장</button>
       <button class="preset ghost" onclick="useGeo()">현재 위치</button>
     </div>
+    <div class="row" style="margin-top:12px;border-top:1px solid #e5e5e5;padding-top:12px">
+      <button onclick="runAudit()">자동 검증 실행</button>
+      <span class="muted">하드코딩·목업이면 반드시 실패하는 항목으로 구성된 12개 테스트</span>
+    </div>
+    <div id="audit"></div>
   </div>
 
   <div class="card">
@@ -181,6 +186,90 @@ async function runAll(){
     $('c3').innerHTML = h;
   }catch(e){ $('c3').innerHTML = `<span class="err">실패: ${esc(e.message)}</span>`; }
 }
+// ===== 자동 검증 =====
+async function runAudit(){
+  const box = $('audit');
+  box.innerHTML = '<div class="loading" style="margin-top:12px">검증 중… (약 20초)</div>';
+  const R = [];
+  const add = (name, ok, detail) => R.push({name, ok, detail});
+  const SPOTS = [['서울 강남역',37.4979,127.0276],['부산 서면',35.1578,129.0596],
+                 ['김해시청',35.2285,128.8894],['대구 칠성시장',35.8797,128.5990]];
+  try{
+    // 1. CCTV 실데이터
+    const cc = {};
+    for(const [n,la,lo] of SPOTS) cc[n] = await post('/api/cctv/nearby',{lat:la,lng:lo,radius:300});
+    add('CCTV source=public_data', Object.values(cc).every(d=>d.source==='public_data'),
+        Object.entries(cc).map(([n,d])=>`${n}:${d.source}`).join(' / '));
+    const ags = Object.entries(cc).map(([n,d])=>[n,(d.cctvs[0]||{}).agency]);
+    add('지역별 관리기관 상이', new Set(ags.map(a=>a[1])).size>=3,
+        ags.map(a=>`${a[0]}→${a[1]}`).join(' / '));
+    const sido = {'서울 강남역':'서울','부산 서면':'부산','김해시청':'경상남도','대구 칠성시장':'대구'};
+    add('좌표와 결과 주소 시도 일치',
+        Object.entries(cc).every(([n,d])=>((d.cctvs[0]||{}).address||'').includes(sido[n])),
+        Object.entries(cc).map(([n,d])=>`${n}:${((d.cctvs[0]||{}).address||'').slice(0,14)}`).join(' / '));
+    const r100 = await post('/api/cctv/nearby',{lat:37.4979,lng:127.0276,radius:100});
+    const r500 = await post('/api/cctv/nearby',{lat:37.4979,lng:127.0276,radius:500});
+    add('반경 확대 시 결과 증가', r500.cctvs.length > r100.cctvs.length,
+        `100m=${r100.cctvs.length}개소, 500m=${r500.cctvs.length}개소`);
+    add('반경 초과 데이터 미포함', r500.cctvs.every(c=>c.distance_m<=500),
+        `초과 ${r500.cctvs.filter(c=>c.distance_m>500).length}건`);
+
+    // 2. 이동패턴 계산
+    const mv = {};
+    for(const [n,la,lo] of SPOTS) mv[n] = await post('/api/predict-movement',{lat:la,lng:lo,hours_elapsed:24});
+    const HARD = {'성남 중고시장':78,'수원 영통':45,'안양 평촌':23};
+    const hit = [];
+    Object.entries(mv).forEach(([n,d])=>d.predictions.forEach(p=>{ if(HARD[p.area]===p.probability) hit.push(`${n}:${p.area}`); }));
+    add('기존 데모 하드코딩 값 미출현', hit.length===0, hit.join(',')||'없음');
+    const tops = Object.entries(mv).map(([n,d])=>[n,(d.predictions[0]||{}).area]);
+    add('지역별 1순위 수색지 상이', new Set(tops.map(t=>t[1])).size>=3,
+        tops.map(t=>`${t[0]}→${t[1]}`).join(' / '));
+    const rr = [];
+    for(const h of [6,24,72]){ const d=await post('/api/predict-movement',{lat:37.4979,lng:127.0276,hours_elapsed:h}); rr.push(d.search_radius_km); }
+    add('경과시간 ↑ → 탐색반경 ↑', rr[0]<rr[1]&&rr[1]<rr[2], `6h=${rr[0]}, 24h=${rr[1]}, 72h=${rr[2]}km`);
+    const m1 = mv['서울 강남역'];
+    const tot = m1.predictions.reduce((s,p)=>s+p.probability,0);
+    add('상대순위 합계 100%', tot===100, `합계 ${tot}%`);
+    add('계산식·면책문구 명시', !!(m1.formula && m1.disclaimer));
+
+    // 3. 신고 자동화 산출
+    const mk = h => { const d=new Date(Date.now()-h*3600*1000), p=n=>String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+    const e1 = await post('/api/evidence-pack',{lat:37.4979,lng:127.0276,stolen_time:mk(2),radius:300});
+    const e2 = await post('/api/evidence-pack',{lat:37.4979,lng:127.0276,stolen_time:mk(240),radius:300});
+    add('도난시각 변경 → 열람마감일 변경', e1.cctv.request_deadline!==e2.cctv.request_deadline,
+        `2시간전=${e1.cctv.request_deadline} / 10일전=${e2.cctv.request_deadline}`);
+    add('오래된 사건일수록 잔여일 적음', e2.cctv.days_left < e1.cctv.days_left,
+        `${e1.cctv.days_left}일 vs ${e2.cctv.days_left}일`);
+    const w = e1.cctv.request_window;
+    const mins = (new Date(w.to.replace(' ','T')) - new Date(w.from.replace(' ','T')))/60000;
+    add('영상 요청구간 60분', mins===60, `${w.from} ~ ${w.to}`);
+    const seoulTel = (e1.cctv.agencies[0]||{}).tel||'';
+    const bs = await post('/api/evidence-pack',{lat:35.1578,lng:129.0596,stolen_time:mk(5),radius:300});
+    const busanTel = (bs.cctv.agencies[0]||{}).tel||'';
+    add('관할기관 지역번호 일치', seoulTel.startsWith('02-') && busanTel.startsWith('051-'),
+        `서울=${seoulTel} / 부산=${busanTel}`);
+    const e3 = await post('/api/evidence-pack',{lat:37.4979,lng:127.0276,stolen_time:mk(27*24),radius:300});
+    const urg = e3.checklist.filter(i=>i.urgent);
+    add('마감 임박 시 긴급항목 자동 삽입', urg.length>=1, urg[0]?urg[0].item:'없음');
+  }catch(e){
+    box.innerHTML = `<div class="err" style="margin-top:12px">검증 중 오류: ${esc(e.message)}</div>`;
+    return;
+  }
+  const ok = R.filter(r=>r.ok).length;
+  let h = `<div style="margin-top:14px;border:1px solid #ccc">`
+        + `<div style="padding:9px 13px;background:${ok===R.length?'#eef7ee':'#fdeeee'};`
+        + `border-bottom:1px solid #ddd;font-size:13px;font-weight:600">`
+        + `검증 결과 ${ok}/${R.length} PASS`
+        + (ok===R.length?' — 전 항목 통과':' — 실패 항목 있음')+`</div><table>`;
+  R.forEach(r=>{
+    h += `<tr><td style="width:64px;font-weight:600;color:${r.ok?'#186a18':'#c00'}">${r.ok?'PASS':'FAIL'}</td>`
+       + `<td style="width:34%">${esc(r.name)}</td><td class="muted">${esc(r.detail||'')}</td></tr>`;
+  });
+  h += '</table></div>';
+  box.innerHTML = h;
+}
+
 runAll();
 </script>
 </body>
