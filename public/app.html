@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 도난탐정 — 실 서비스</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060810;font-family:-apple-system,'Apple SD Gothic Neo','Pretendard',sans-serif;display:flex;min-height:100vh;overflow-x:hidden}
+
+#sidebar{width:220px;flex-shrink:0;background:#0A0C14;border-right:1px solid rgba(255,255,255,0.05);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:100;transition:transform .25s}
+#sidebar-header{padding:16px 14px 12px;border-bottom:1px solid rgba(255,255,255,0.05)}
+#sidebar-header .logo{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+#sidebar-header .logo-icon{width:28px;height:28px;border-radius:9px;background:#6366F1;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#sidebar-header .logo-text{color:#fff;font-size:13px;font-weight:700}
+#sidebar-header .sub{color:#4B5563;font-size:10px}
+.sidebar-section{padding:10px 10px 6px;color:#374151;font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.sidebar-item{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;border-radius:8px;margin:1px 6px;transition:background .15s}
+.sidebar-item:hover{background:rgba(255,255,255,0.04)}
+.sidebar-item.active{background:rgba(99,102,241,0.15)}
+.sidebar-item .s-num{width:18px;height:18px;border-radius:5px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:#6B7280;font-weight:600}
+.sidebar-item.active .s-num{background:#6366F1;color:#fff}
+.sidebar-item .s-name{color:#9CA3AF;font-size:11px;line-height:1.3}
+.sidebar-item.active .s-name{color:#C7D2FE}
+
+#main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+#topbar{background:#0A0C14;border-bottom:1px solid rgba(255,255,255,0.05);padding:12px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50}
+#topbar a.home-btn{background:#1e1e30;color:#888;text-decoration:none;padding:5px 12px;border-radius:7px;font-size:12px;border:1px solid #2a2a3e;white-space:nowrap}
+#screen-info{flex:1;text-align:center}
+#screen-info .s-title{color:#fff;font-size:14px;font-weight:600}
+#screen-info .s-subtitle{color:#6B7280;font-size:11px;margin-top:1px}
+.nav-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);color:#9CA3AF;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:12px;font-weight:500;transition:all .15s;white-space:nowrap}
+.nav-btn:hover{background:rgba(255,255,255,0.1);color:#fff}
+.nav-btn:disabled{opacity:.3;cursor:not-allowed}
+.api-badge{background:rgba(52,211,153,0.12);color:#34D399;font-size:10px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid rgba(52,211,153,0.2);white-space:nowrap}
+
+#progress-bar-wrap{background:#0A0C14;border-bottom:1px solid rgba(255,255,255,0.04);padding:8px 24px;display:flex;align-items:center;gap:12px}
+#progress-track{flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+#progress-fill{height:100%;background:#6366F1;border-radius:2px;transition:width .3s}
+#progress-label{color:#6B7280;font-size:11px;white-space:nowrap}
+
+#phone-area{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 24px}
+.phone-shell{width:300px;background:#1C1F26;border-radius:36px;padding:12px;box-shadow:0 0 0 1px rgba(255,255,255,0.05),0 32px 64px rgba(0,0,0,0.7)}
+
+.screen{background:#0A0C10;border-radius:26px;overflow:hidden;height:590px;display:flex;flex-direction:column;position:relative}
+.screen-slide{position:absolute;inset:0;display:none;flex-direction:column}
+.screen-slide.active{display:flex}
+.statusbar{padding:14px 18px 8px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.statusbar span{color:#fff;font-size:12px;font-weight:500}
+.content{padding:0 18px 12px;flex:1;overflow-y:auto;overflow-x:hidden}
+.content::-webkit-scrollbar{width:2px}
+.content::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+.header{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.header-title{color:#fff;font-size:15px;font-weight:600}
+.badge-danger{background:rgba(239,68,68,0.15);color:#EF4444;font-size:9px;font-weight:600;padding:3px 8px;border-radius:12px;margin-left:auto}
+.badge-indigo{background:rgba(99,102,241,0.15);color:#818CF8;font-size:9px;font-weight:600;padding:3px 8px;border-radius:12px;margin-left:auto}
+.badge-green{background:rgba(52,211,153,0.15);color:#34D399;font-size:9px;font-weight:600;padding:3px 8px;border-radius:12px;margin-left:auto}
+.badge-success{background:rgba(52,211,153,0.15);color:#34D399;font-size:9px;font-weight:600;padding:3px 8px;border-radius:12px;margin-left:auto}
+.card{border-radius:14px;padding:14px;margin-bottom:10px}
+.card-dark{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)}
+.card-alert{background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15)}
+.card-indigo{background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15)}
+.card-success{background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15)}
+.row{display:flex;align-items:center;gap:10px}
+.icon-circle{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sub{color:#6B7280;font-size:11px;margin-top:2px}
+.label{color:#9CA3AF;font-size:11px}
+.value{color:#E5E7EB;font-size:12px;font-weight:500}
+.divider{height:1px;background:rgba(255,255,255,0.04);margin:8px 0}
+.btn-primary{background:#6366F1;border-radius:10px;padding:11px;text-align:center;color:#fff;font-size:12px;font-weight:600;cursor:pointer;border:none;width:100%}
+.btn-secondary{background:rgba(255,255,255,0.06);border-radius:10px;padding:11px;text-align:center;color:#D1D5DB;font-size:12px;font-weight:500;cursor:pointer;border:none;width:100%}
+.btn-full{background:#6366F1;border-radius:12px;padding:13px;text-align:center;color:#fff;font-size:13px;font-weight:600;margin-top:10px;cursor:pointer;border:none;width:100%;display:block}
+.btn-full:disabled{opacity:.5;cursor:not-allowed}
+.btn-full-outline{background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;text-align:center;color:#9CA3AF;font-size:13px;font-weight:500;margin-top:8px;cursor:pointer;width:100%;display:block}
+.btn-danger{background:#EF4444;border-radius:10px;padding:10px;text-align:center;color:#fff;font-size:12px;font-weight:600;cursor:pointer;border:none}
+.nav{padding:8px 18px 14px;display:flex;justify-content:space-around;flex-shrink:0;border-top:1px solid rgba(255,255,255,0.04)}
+.nav-item{text-align:center;cursor:pointer}
+.nav-item p{font-size:9px;margin-top:2px}
+.section-label{color:#9CA3AF;font-size:11px;font-weight:500;margin:12px 0 8px}
+.input-group{margin-bottom:10px}
+.input-lbl{color:#9CA3AF;font-size:11px;margin-bottom:4px}
+.input-box{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;color:#E5E7EB;font-size:12px;width:100%}
+.input-box:focus{outline:none;border-color:rgba(99,102,241,0.5);background:rgba(99,102,241,0.06)}
+.input-box.error{border-color:rgba(239,68,68,0.5);background:rgba(239,68,68,0.04)}
+.progress-dots{display:flex;gap:6px;justify-content:center;margin-bottom:16px}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.1)}
+.dot.active{background:#6366F1;width:22px;border-radius:4px}
+.dot.done{background:#34D399}
+.dash-stat-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.dash-stat{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:10px 12px}
+.dash-stat-num{font-size:22px;font-weight:800;line-height:1.1}
+.dash-stat-label{color:#6B7280;font-size:11px;margin-top:2px}
+.activity-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.activity-item:last-child{border-bottom:none}
+.photo-area{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.photo-slot{aspect-ratio:1;background:rgba(255,255,255,0.03);border:1.5px dashed rgba(255,255,255,0.1);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:border-color .15s;position:relative;overflow:hidden}
+.photo-slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.case-id-box{background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:14px;text-align:center;margin-bottom:12px}
+.case-id-num{color:#818CF8;font-size:20px;font-weight:800;letter-spacing:.06em}
+.case-id-sub{color:#6B7280;font-size:11px;margin-top:4px}
+.crawl-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.crawl-item:last-child{border-bottom:none}
+.pulse{width:6px;height:6px;border-radius:50%;background:#34D399;flex-shrink:0;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.tab-nav{display:flex;gap:4px;overflow-x:auto;padding:0 18px 8px;flex-shrink:0}
+.tab-nav::-webkit-scrollbar{display:none}
+.tab-chip{padding:5px 10px;border-radius:8px;font-size:10px;font-weight:600;white-space:nowrap;cursor:pointer;transition:all .15s;flex-shrink:0}
+.tab-active{background:#6366F1;color:#fff}
+.tab-inactive{background:rgba(255,255,255,0.05);color:#6B7280}
+.listing{display:flex;gap:8px;padding:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;margin-bottom:8px;cursor:pointer}
+.listing-img{width:48px;height:48px;background:rgba(255,255,255,0.05);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.listing-img img{width:100%;height:100%;object-fit:cover}
+.listing-info{flex:1;min-width:0}
+.sim-badge{display:inline-block;padding:2px 6px;border-radius:5px;font-size:9px;font-weight:600}
+.sim-high{background:rgba(239,68,68,0.15);color:#EF4444}
+.sim-mid{background:rgba(251,191,36,0.15);color:#FBBF24}
+.sim-low{background:rgba(99,102,241,0.15);color:#818CF8}
+.text-area{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;color:#9CA3AF;font-size:11px;width:100%;height:64px;line-height:1.5;resize:none}
+.text-area:focus{outline:none;border-color:rgba(99,102,241,0.4)}
+.auto-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:6px}
+.auto-check{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.check-done{background:rgba(52,211,153,0.15)}
+.check-pending{background:rgba(99,102,241,0.15)}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;text-align:center;gap:8px}
+.empty-state-icon{width:48px;height:48px;border-radius:16px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;margin-bottom:4px}
+.empty-state-title{color:#D1D5DB;font-size:13px;font-weight:600}
+.empty-state-sub{color:#4B5563;font-size:11px;line-height:1.5}
+.spinner-wrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,12,16,0.88);backdrop-filter:blur(4px);z-index:20;border-radius:26px;gap:12px}
+.spinner{width:32px;height:32px;border:2.5px solid rgba(99,102,241,0.15);border-top-color:#6366F1;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner-text{color:#9CA3AF;font-size:12px}
+.screen-slide{animation:none}
+.screen-slide.slide-in{animation:slideIn .28s cubic-bezier(.25,.46,.45,.94)}
+@keyframes slideIn{from{opacity:0;transform:translateX(22px)}to{opacity:1;transform:translateX(0)}}
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:#EF4444;color:#fff;font-size:12px;font-weight:600;padding:10px 18px;border-radius:12px;box-shadow:0 4px 20px rgba(239,68,68,0.35);z-index:999;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;max-width:calc(100vw - 32px)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.toast-success{background:#10B981;box-shadow:0 4px 20px rgba(16,185,129,0.35)}
+#hamburger{display:none;position:fixed;top:12px;right:16px;z-index:200;background:#1e1e30;border:1px solid #2a2a3e;border-radius:8px;padding:7px 10px;cursor:pointer;color:#888;font-size:13px}
+@media(max-width:700px){
+  #sidebar{transform:translateX(-100%)}
+  #sidebar.open{transform:translateX(0)}
+  #main{margin-left:0}
+  #hamburger{display:block}
+}
+@media(max-width:480px){
+  #phone-area{padding:12px 0}
+  .phone-shell{width:100%;max-width:100%;border-radius:0;padding:6px}
+  .screen{border-radius:0;height:calc(100svh - 110px)}
+}
+@media(min-width:801px){.phone-shell{width:340px}}
+@media(min-width:1100px){.phone-shell{width:370px}}
+</style>
+</head>
+<body>
+<div id="toast" role="alert" aria-live="assertive"></div>
+<div id="hamburger" onclick="toggleSidebar()">☰</div>
+
+<!-- 사이드바 -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <div class="logo">
+      <div class="logo-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M11 8v3l2 2"/></svg></div>
+      <span class="logo-text">AI 도난탐정</span>
+    </div>
+    <div class="sub">실 서비스 연결 버전</div>
+  </div>
+  <div class="sidebar-section">메인</div>
+  <div class="sidebar-item active" data-screen="dashboard" onclick="goToScreen('dashboard')"><div class="s-num">06</div><div class="s-name">메인 대시보드 <span style="color:#34D399;font-size:9px">API</span></div></div>
+  <div class="sidebar-item" data-screen="register" onclick="goToScreen('register')"><div class="s-num">07</div><div class="s-name">자전거 등록</div></div>
+  <div class="sidebar-section">도난 신고</div>
+  <div class="sidebar-item" data-screen="report1" onclick="goToScreen('report1')"><div class="s-num">09</div><div class="s-name">도난 신고 1/3</div></div>
+  <div class="sidebar-item" data-screen="report2" onclick="goToScreen('report2')"><div class="s-num">10</div><div class="s-name">도난 신고 2/3</div></div>
+  <div class="sidebar-item" data-screen="report_done" onclick="goToScreen('report_done')"><div class="s-num">11</div><div class="s-name">신고 완료 <span style="color:#34D399;font-size:9px">API</span></div></div>
+  <div class="sidebar-section">케이스</div>
+  <div class="sidebar-item" data-screen="case_detail" onclick="goToScreen('case_detail')"><div class="s-num">12</div><div class="s-name">케이스 상세 <span style="color:#34D399;font-size:9px">API</span></div></div>
+</div>
+
+<!-- 메인 -->
+<div id="main">
+  <div id="topbar">
+    <a href="/" class="home-btn">← 홈</a>
+    <div id="screen-info">
+      <div class="s-title" id="topbar-title">메인 대시보드</div>
+      <div class="s-subtitle" id="topbar-subtitle">실 API 연결</div>
+    </div>
+    <div class="api-badge" id="api-status">● API 연결 중...</div>
+  </div>
+  <div id="progress-bar-wrap">
+    <div id="progress-track"><div id="progress-fill" style="width:0%"></div></div>
+    <div id="progress-label">Phase 1 — 4 화면</div>
+  </div>
+  <div id="phone-area">
+    <div class="phone-shell">
+      <div class="screen" id="screen-container">
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 화면 06: 메인 대시보드 (실 API) -->
+<!-- ══════════════════════════════════════════ -->
+<div class="screen-slide active" id="s-dashboard">
+  <div class="statusbar"><span>9:41</span><span style="color:#6B7280;font-size:11px">LTE</span></div>
+  <div class="content">
+    <div style="display:flex;align-items:center;margin-bottom:14px">
+      <div><p style="color:#9CA3AF;font-size:11px">AI 도난탐정</p><p style="color:#fff;font-size:15px;font-weight:700">대시보드</p></div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+        <div id="dash-api-dot" style="width:8px;height:8px;border-radius:50%;background:#4B5563"></div>
+        <span id="dash-api-label" style="color:#4B5563;font-size:10px">연결 중</span>
+      </div>
+    </div>
+    <div class="dash-stat-row" id="dash-stats">
+      <div class="dash-stat">
+        <div class="dash-stat-num" style="color:#818CF8" id="stat-bikes">—</div>
+        <div class="dash-stat-label">등록 자전거</div>
+      </div>
+      <div class="dash-stat" style="cursor:pointer" onclick="loadAndGoCase()">
+        <div class="dash-stat-num" style="color:#EF4444" id="stat-active">—</div>
+        <div class="dash-stat-label">활성 케이스</div>
+      </div>
+    </div>
+    <!-- 케이스 목록 -->
+    <div class="section-label">감시 중인 케이스</div>
+    <div id="case-list-container">
+      <div class="empty-state">
+        <div class="spinner" style="width:20px;height:20px;border-width:2px"></div>
+        <p style="color:#6B7280;font-size:11px;margin-top:8px">케이스 불러오는 중...</p>
+      </div>
+    </div>
+    <button class="btn-full" onclick="goToScreen('report1')" style="margin-top:6px">+ 도난 신고하기</button>
+    <button class="btn-full-outline" onclick="loadDashboard()">새로고침</button>
+  </div>
+  <div class="nav">
+    <div class="nav-item" onclick="goToScreen('dashboard')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><p style="color:#818CF8">홈</p></div>
+    <div class="nav-item" onclick="goToScreen('report1')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><p style="color:#6B7280">신고</p></div>
+    <div class="nav-item" onclick="goToScreen('register')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6l-4 11h-2"/></svg><p style="color:#6B7280">등록</p></div>
+    <div class="nav-item" onclick="goToScreen('case_detail')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><p style="color:#6B7280">케이스</p></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 화면 07: 자전거 등록 (POST mock) -->
+<!-- ══════════════════════════════════════════ -->
+<div class="screen-slide" id="s-register">
+  <div class="statusbar"><span>9:41</span><span style="color:#6B7280;font-size:11px">LTE</span></div>
+  <div class="content">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" style="cursor:pointer" onclick="goToScreen('dashboard')"><path d="M19 12H5m7-7l-7 7 7 7"/></svg>
+      <span style="color:#fff;font-size:15px;font-weight:600">자전거 등록</span>
+      <span class="badge-green">무료</span>
+    </div>
+    <div class="section-label" style="margin-top:0">자전거 사진 (최대 3장)</div>
+    <div class="photo-area" style="margin-bottom:12px">
+      <div class="photo-slot" id="reg-slot-0">
+        <input type="file" accept="image/*" onchange="handlePhotoUpload(this,'reg-slot-0')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="1.5"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6l-4 11h-2"/></svg>
+        <p style="color:#6366F1;font-size:9px;font-weight:600">대표 사진</p>
+      </div>
+      <div class="photo-slot" id="reg-slot-1">
+        <input type="file" accept="image/*" onchange="handlePhotoUpload(this,'reg-slot-1')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4B5563" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg>
+        <p style="color:#4B5563;font-size:9px">추가</p>
+      </div>
+      <div class="photo-slot" id="reg-slot-2">
+        <input type="file" accept="image/*" onchange="handlePhotoUpload(this,'reg-slot-2')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4B5563" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg>
+        <p style="color:#4B5563;font-size:9px">추가</p>
+      </div>
+    </div>
+    <div class="input-group"><div class="input-lbl">브랜드</div><input class="input-box" id="reg-brand" type="text" placeholder="스페셜라이즈드, 자이언트..."></div>
+    <div class="input-group"><div class="input-lbl">모델명</div><input class="input-box" id="reg-model" type="text" placeholder="알레 AL Sprint"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="input-group"><div class="input-lbl">구매 연도</div><input class="input-box" id="reg-year" type="text" placeholder="2023"></div>
+      <div class="input-group"><div class="input-lbl">구매 가격</div><input class="input-box" id="reg-price" type="text" placeholder="1,350,000원"></div>
+    </div>
+    <div class="input-group"><div class="input-lbl">시리얼 번호 <span style="color:#6366F1;font-size:10px">* 회수율 3배↑</span></div><input class="input-box" id="reg-serial" type="text" placeholder="SL2023-KR-487291"></div>
+    <div class="input-group"><div class="input-lbl">색상 / 특징</div><input class="input-box" id="reg-color" type="text" placeholder="매트 블랙 / 탑튜브 스크래치 있음"></div>
+    <div style="background:rgba(251,191,36,0.05);border:1px solid rgba(251,191,36,0.12);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+      <p style="color:#FBBF24;font-size:11px;font-weight:500;margin-bottom:4px">Phase 2 예정</p>
+      <p style="color:#6B7280;font-size:10px;line-height:1.5">자전거 등록 API는 Phase 2에서 연결됩니다. 현재는 UI 프리뷰 단계입니다.</p>
+    </div>
+    <button class="btn-full" onclick="handleRegisterBike()">등록 저장 (Phase 2)</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 화면 09: 도난 신고 1/3 -->
+<!-- ══════════════════════════════════════════ -->
+<div class="screen-slide" id="s-report1">
+  <div class="statusbar"><span>9:41</span><span style="color:#6B7280;font-size:11px">LTE</span></div>
+  <div class="content">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" style="cursor:pointer" onclick="goToScreen('dashboard')"><path d="M19 12H5m7-7l-7 7 7 7"/></svg>
+      <span style="color:#fff;font-size:15px;font-weight:600">도난 신고</span>
+      <span style="background:rgba(239,68,68,0.15);color:#EF4444;font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;margin-left:auto">1 / 3</span>
+    </div>
+    <div style="height:3px;background:rgba(255,255,255,0.06);border-radius:2px;margin-bottom:14px;overflow:hidden"><div style="height:100%;width:33%;background:#EF4444;border-radius:2px"></div></div>
+    <div class="section-label" style="margin-top:0">자전거 정보</div>
+    <div class="input-group"><div class="input-lbl">브랜드</div><input class="input-box" id="r1-brand" type="text" value="스페셜라이즈드" placeholder="브랜드명"></div>
+    <div class="input-group"><div class="input-lbl">모델명</div><input class="input-box" id="r1-model" type="text" value="알레 AL Sprint" placeholder="모델명"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="input-group"><div class="input-lbl">색상</div><input class="input-box" id="r1-color" type="text" value="매트 블랙" placeholder="색상"></div>
+      <div class="input-group"><div class="input-lbl">시리얼</div><input class="input-box" id="r1-serial" type="text" value="SL2023-KR" placeholder="시리얼 번호"></div>
+    </div>
+    <div class="section-label">도난 장소</div>
+    <div class="input-group" style="margin-bottom:0">
+      <div class="input-box" style="display:flex;align-items:center;gap:8px;padding:10px 12px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <input type="text" id="r1-location" value="서울 성동구 왕십리로 24 앞" style="background:none;border:none;color:#E5E7EB;font-size:12px;flex:1;outline:none" placeholder="도난 장소 입력">
+      </div>
+    </div>
+    <p style="color:#6B7280;font-size:11px;margin-top:4px;margin-bottom:10px">GPS 기준 자동 입력 (수정 가능)</p>
+    <div class="section-label">이메일 (결과 알림)</div>
+    <div class="input-group"><input class="input-box" id="r1-email" type="email" placeholder="your@email.com"></div>
+    <button class="btn-full" onclick="goToScreen('report2')">다음 — 상세 정보</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 화면 10: 도난 신고 2/3 -->
+<!-- ══════════════════════════════════════════ -->
+<div class="screen-slide" id="s-report2">
+  <div class="statusbar"><span>9:41</span><span style="color:#6B7280;font-size:11px">LTE</span></div>
+  <div class="content">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" style="cursor:pointer" onclick="goToScreen('report1')"><path d="M19 12H5m7-7l-7 7 7 7"/></svg>
+      <span style="color:#fff;font-size:15px;font-weight:600">도난 신고</span>
+      <span style="background:rgba(239,68,68,0.15);color:#EF4444;font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;margin-left:auto">2 / 3</span>
+    </div>
+    <div style="height:3px;background:rgba(255,255,255,0.06);border-radius:2px;margin-bottom:14px;overflow:hidden"><div style="height:100%;width:66%;background:#EF4444;border-radius:2px"></div></div>
+    <div class="section-label" style="margin-top:0">추가 특징</div>
+    <div class="input-group"><div class="input-lbl">가격 (원)</div><input class="input-box" id="r2-price" type="text" placeholder="1350000" value="1350000"></div>
+    <div class="input-group">
+      <div class="input-lbl">특이사항</div>
+      <textarea class="text-area" id="r2-features" style="margin-bottom:0">탑튜브 왼쪽에 실버 스크래치 3cm 정도 있음.</textarea>
+    </div>
+    <div class="section-label">검색 키워드</div>
+    <div class="input-group"><div class="input-lbl">추가 키워드 (선택)</div><input class="input-box" id="r2-keywords" type="text" placeholder="로드바이크, 스프린트..."></div>
+    <div class="card-indigo card" style="padding:10px 12px;margin-bottom:10px">
+      <div class="row" style="gap:8px">
+        <div class="icon-circle" style="background:rgba(99,102,241,0.15);width:24px;height:24px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+        <div style="flex:1"><p style="color:#C7D2FE;font-size:11px;font-weight:500">실 API — POST /api/report</p><p style="color:#6B7280;font-size:10px;margin-top:2px">당근마켓·번개장터 즉시 크롤링 후 케이스 생성</p></div>
+      </div>
+    </div>
+    <button class="btn-full" id="submit-report-btn" onclick="submitReport()">신고 제출 — AI 탐색 시작</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 화면 11: 신고 완료 (실 API 응답) -->
+<!-- ══════════════════════════════════════════ -->
+<div class="screen-slide" id="s-report_done">
+  <div class="statusbar"><span>9:41</span><span style="color:#6B7280;font-size:11px">LTE</span></div>
+  <div class="content">
+    <div style="text-align:center;padding:18px 0 14px">
+      <div style="width:54px;height:54px;border-radius:50%;background:rgba(52,211,153,0.15);border:2px solid rgba(52,211,153,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 10px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <p style="color:#fff;font-size:16px;font-weight:700;margin-bottom:4px">도난 신고 완료</p>
+      <p style="color:#9CA3AF;font-size:12px">AI가 즉시 탐색을 시작했습니다</p>
+    </div>
+    <div class="case-id-box">
+      <p style="color:#9CA3AF;font-size:11px;margin-bottom:6px">케이스 번호</p>
+      <div class="case-id-num" id="result-case-id">—</div>
+      <div class="case-id-sub" id="result-scan-time">접수 완료</div>
+    </div>
+    <!-- 스캔 결과 요약 -->
+    <div class="card card-dark" style="padding:12px;margin-bottom:10px" id="result-summary-card">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+        <div><p style="color:#9CA3AF;font-size:10px">스캔</p><p style="color:#E5E7EB;font-size:15px;font-weight:700" id="result-total">—</p></div>
+        <div><p style="color:#9CA3AF;font-size:10px">의심</p><p style="color:#EF4444;font-size:15px;font-weight:700" id="result-suspicious">—</p></div>
+        <div><p style="color:#9CA3AF;font-size:10px">최고 유사도</p><p style="color:#FBBF24;font-size:15px;font-weight:700" id="result-max-sim">—</p></div>
+      </div>
+    </div>
+    <!-- 상위 매물 3건 -->
+    <div class="section-label">발견된 의심 매물</div>
+    <div id="result-listings"></div>
+    <!-- 경찰서 -->
+    <div class="card-alert card" style="padding:10px 12px;margin-bottom:8px" id="result-police-card">
+      <div class="row" style="gap:8px">
+        <div class="icon-circle" style="background:rgba(239,68,68,0.12);width:24px;height:24px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div>
+        <div style="flex:1"><p style="color:#F87171;font-size:11px;font-weight:500">관할 경찰서</p><p style="color:#6B7280;font-size:10px" id="result-police">확인 중...</p></div>
+      </div>
+    </div>
+    <button class="btn-full" onclick="loadCaseDetail(resultCaseId)">케이스 상세 보기</button>
+    <button class="btn-full-outline" onclick="goToScreen('dashboard')">대시보드로</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- 화면 12: 케이스 상세 (실 API) -->
+<!-- ══════════════════════════════════════════ -->
+<div class="screen-slide" id="s-case_detail">
+  <div class="statusbar"><span>9:41</span><span style="color:#6B7280;font-size:11px">LTE</span></div>
+  <div style="padding:0 18px 8px;flex-shrink:0">
+    <div class="header" style="margin-bottom:10px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" style="cursor:pointer" onclick="goToScreen('dashboard')"><path d="M19 12H5m7-7l-7 7 7 7"/></svg>
+      <span class="header-title" id="detail-case-id">케이스</span>
+      <span class="badge-danger" id="detail-status">진행중</span>
+    </div>
+    <!-- 케이스 선택 (여러 케이스 있을 때) -->
+    <div id="case-selector-wrap" style="margin-bottom:8px;display:none">
+      <select id="case-selector" class="input-box" style="font-size:11px;padding:7px 10px" onchange="loadCaseDetail(this.value)">
+      </select>
+    </div>
+  </div>
+  <div class="tab-nav">
+    <div class="tab-chip tab-active">중고감시</div>
+    <div class="tab-chip tab-inactive" style="opacity:.4">패턴예측</div>
+    <div class="tab-chip tab-inactive" style="opacity:.4">CCTV</div>
+    <div class="tab-chip tab-inactive" style="opacity:.4">방범등록</div>
+    <div class="tab-chip tab-inactive" style="opacity:.4">112신고</div>
+    <div class="tab-chip tab-inactive" style="opacity:.4">보험</div>
+  </div>
+  <div class="content" style="padding-top:10px" id="case-detail-content">
+    <div class="empty-state">
+      <div class="spinner" style="width:20px;height:20px;border-width:2px"></div>
+      <p style="color:#6B7280;font-size:11px;margin-top:8px">케이스 불러오는 중...</p>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="nav-item" onclick="goToScreen('dashboard')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><p style="color:#6B7280">홈</p></div>
+    <div class="nav-item" onclick="goToScreen('report1')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><p style="color:#6B7280">신고</p></div>
+    <div class="nav-item" onclick="loadCaseDetail(currentCaseId)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><p style="color:#EF4444">케이스</p></div>
+    <div class="nav-item" onclick="goToScreen('register')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6l-4 11h-2"/></svg><p style="color:#6B7280">등록</p></div>
+  </div>
+</div>
+
+      </div><!-- /screen -->
+    </div><!-- /phone-shell -->
+  </div><!-- /phone-area -->
+</div><!-- /main -->
+
+<script>
+// ═══════════════════════════════════════════════
+// API 베이스 URL 자동 감지
+// ═══════════════════════════════════════════════
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? `${window.location.protocol}//${window.location.hostname}:8000`
+  : window.location.origin;
+
+// 전역 상태
+let currentScreen = 'dashboard';
+let currentCaseId = null;
+let resultCaseId = null;
+let dashboardCases = [];
+
+const SCREEN_META = {
+  'dashboard':    ['메인 대시보드', '실 API — GET /api/cases'],
+  'register':     ['자전거 등록', 'Phase 2 예정 (UI 프리뷰)'],
+  'report1':      ['도난 신고 1/3', '자전거 정보 입력'],
+  'report2':      ['도난 신고 2/3', '실 API — POST /api/report'],
+  'report_done':  ['신고 완료', '케이스 생성됨'],
+  'case_detail':  ['케이스 상세', '실 API — GET /api/case/{id}/listings'],
+};
+
+// ═══════════════════════════════════════════════
+// 화면 전환
+// ═══════════════════════════════════════════════
+function goToScreen(name) {
+  const prevEl = document.getElementById('s-' + currentScreen);
+  if (prevEl) prevEl.classList.remove('active');
+
+  currentScreen = name;
+  const nextEl = document.getElementById('s-' + name);
+  if (nextEl) {
+    nextEl.classList.add('active');
+    nextEl.classList.remove('slide-in');
+    void nextEl.offsetWidth;
+    nextEl.classList.add('slide-in');
+    const content = nextEl.querySelector('.content');
+    if (content) content.scrollTop = 0;
+  }
+
+  const meta = SCREEN_META[name] || [name, ''];
+  document.getElementById('topbar-title').textContent = meta[0];
+  document.getElementById('topbar-subtitle').textContent = meta[1];
+
+  document.querySelectorAll('.sidebar-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.screen === name);
+  });
+
+  document.getElementById('sidebar').classList.remove('open');
+
+  // 화면 진입 시 자동 로드
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'case_detail') loadCaseDetail(currentCaseId);
+}
+
+// ═══════════════════════════════════════════════
+// 토스트
+// ═══════════════════════════════════════════════
+let toastTimer = null;
+function showToast(msg, type = 'error') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (type === 'success' ? ' toast-success' : '');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ''; }, 3500);
+}
+
+// ═══════════════════════════════════════════════
+// 스피너
+// ═══════════════════════════════════════════════
+function showSpinner(screenId, text) {
+  const screen = document.getElementById('s-' + screenId);
+  if (!screen) return;
+  removeSpinner(screenId);
+  const wrap = document.createElement('div');
+  wrap.className = 'spinner-wrap';
+  wrap.id = 'sp-' + screenId;
+  wrap.innerHTML = `<div class="spinner"></div><p class="spinner-text">${text || '처리 중...'}</p>`;
+  screen.appendChild(wrap);
+}
+function removeSpinner(screenId) {
+  const s = document.getElementById('sp-' + screenId);
+  if (s) s.remove();
+}
+
+// ═══════════════════════════════════════════════
+// API 상태 배지 업데이트
+// ═══════════════════════════════════════════════
+function setApiStatus(ok) {
+  const badge = document.getElementById('api-status');
+  const dot = document.getElementById('dash-api-dot');
+  const label = document.getElementById('dash-api-label');
+  if (ok) {
+    badge.textContent = '● API 연결됨';
+    badge.style.color = '#34D399';
+    badge.style.background = 'rgba(52,211,153,0.12)';
+    badge.style.borderColor = 'rgba(52,211,153,0.2)';
+    if (dot) { dot.style.background = '#34D399'; }
+    if (label) { label.style.color = '#34D399'; label.textContent = '연결됨'; }
+  } else {
+    badge.textContent = '● API 오류';
+    badge.style.color = '#EF4444';
+    badge.style.background = 'rgba(239,68,68,0.12)';
+    badge.style.borderColor = 'rgba(239,68,68,0.2)';
+    if (dot) { dot.style.background = '#EF4444'; }
+    if (label) { label.style.color = '#EF4444'; label.textContent = 'API 오류'; }
+  }
+}
+
+// ═══════════════════════════════════════════════
+// 유사도 배지 색상
+// ═══════════════════════════════════════════════
+function simBadgeClass(sim) {
+  if (sim >= 80) return 'sim-high';
+  if (sim >= 70) return 'sim-mid';
+  return 'sim-low';
+}
+
+// ═══════════════════════════════════════════════
+// #6 메인 대시보드 — GET /api/cases
+// ═══════════════════════════════════════════════
+async function loadDashboard() {
+  const container = document.getElementById('case-list-container');
+  container.innerHTML = `<div class="empty-state">
+    <div class="spinner" style="width:20px;height:20px;border-width:2px"></div>
+    <p style="color:#6B7280;font-size:11px;margin-top:8px">불러오는 중...</p>
+  </div>`;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/cases`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    setApiStatus(true);
+
+    dashboardCases = data.cases || [];
+    const active = dashboardCases.filter(c => c.status === 'active');
+    const bikes = new Set(dashboardCases.map(c => c.brand + c.model)).size;
+
+    document.getElementById('stat-bikes').textContent = bikes || dashboardCases.length;
+    document.getElementById('stat-active').textContent = active.length;
+
+    if (dashboardCases.length === 0) {
+      container.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B5563" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+        <p class="empty-state-title">케이스 없음</p>
+        <p class="empty-state-sub">도난 신고를 하면 AI가 즉시 탐색을 시작합니다</p>
+      </div>`;
+      return;
+    }
+
+    container.innerHTML = dashboardCases.slice(0, 5).map(c => {
+      const isActive = c.status === 'active';
+      const border = isActive ? 'border-color:rgba(239,68,68,0.2);background:rgba(239,68,68,0.03)' : '';
+      const statusColor = isActive ? '#EF4444' : '#34D399';
+      const statusText = isActive ? '감시 중' : c.status === 'found' ? '회수됨' : c.status;
+      const unread = c.unread_count > 0 ? `<span style="background:rgba(239,68,68,0.15);color:#EF4444;font-size:9px;padding:1px 6px;border-radius:4px;margin-left:6px">+${c.unread_count}</span>` : '';
+      const interval = c.crawl_interval_minutes ? `${c.crawl_interval_minutes}분마다 크롤링` : '';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.06);${border};cursor:pointer" onclick="loadCaseDetail('${c.case_id}')">
+        <div style="width:36px;height:36px;background:rgba(255,255,255,0.05);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${statusColor}" stroke-width="1.5"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6l-4 11h-2"/></svg>
+        </div>
+        <div style="flex:1;min-width:0">
+          <p style="color:#E5E7EB;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.brand} ${c.model}${unread}</p>
+          <p style="color:#6B7280;font-size:10px;margin-top:2px">${c.case_id}</p>
+          ${interval ? `<p style="color:#4B5563;font-size:10px">${interval}</p>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          ${isActive ? '<div class="pulse"></div>' : ''}
+          <span style="color:${statusColor};font-size:10px;font-weight:600">${statusText}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+  } catch (e) {
+    setApiStatus(false);
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+      <p class="empty-state-title">API 연결 실패</p>
+      <p class="empty-state-sub">${API_BASE}<br>${e.message}</p>
+    </div>`;
+    showToast('API 연결 실패: ' + e.message);
+  }
+}
+
+// 대시보드에서 첫 케이스 클릭 → case_detail 이동
+function loadAndGoCase() {
+  if (dashboardCases.length > 0) {
+    loadCaseDetail(dashboardCases[0].case_id);
+  } else {
+    goToScreen('case_detail');
+  }
+}
+
+// ═══════════════════════════════════════════════
+// #7 자전거 등록 (Phase 2 stub)
+// ═══════════════════════════════════════════════
+function handleRegisterBike() {
+  showToast('자전거 등록 API는 Phase 2에서 연결됩니다.', 'error');
+}
+
+function handlePhotoUpload(input, slotId) {
+  const file = input.files && input.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const slot = document.getElementById(slotId);
+  if (!slot) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    Array.from(slot.children).forEach(child => { if (child.tagName !== 'INPUT') child.remove(); });
+    const img = document.createElement('img');
+    img.src = e.target.result;
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:10px';
+    img.alt = '사진 미리보기';
+    slot.appendChild(img);
+    showToast('사진 추가됨', 'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ═══════════════════════════════════════════════
+// #9/#10 도난 신고 — POST /api/report
+// ═══════════════════════════════════════════════
+async function submitReport() {
+  const btn = document.getElementById('submit-report-btn');
+
+  // 1/3 화면 값 수집
+  const brand     = document.getElementById('r1-brand')?.value?.trim() || '';
+  const model     = document.getElementById('r1-model')?.value?.trim() || '';
+  const color     = document.getElementById('r1-color')?.value?.trim() || '';
+  const serial    = document.getElementById('r1-serial')?.value?.trim() || '';
+  const location  = document.getElementById('r1-location')?.value?.trim() || '';
+  const email     = document.getElementById('r1-email')?.value?.trim() || '';
+
+  // 2/3 화면 값 수집
+  const price     = document.getElementById('r2-price')?.value?.trim() || '';
+  const features  = document.getElementById('r2-features')?.value?.trim() || '';
+  const keywords  = document.getElementById('r2-keywords')?.value?.trim() || '';
+
+  if (!brand && !model) {
+    showToast('브랜드 또는 모델명을 입력해 주세요.');
+    return;
+  }
+  if (!location) {
+    showToast('도난 장소를 입력해 주세요.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'AI 탐색 중... (5~15초)';
+  showSpinner('report2', 'AI 케이스 생성 중...');
+
+  const body = { brand, model, color, serial, location, keywords, price, features, owner_email: email };
+
+  try {
+    const res = await fetch(`${API_BASE}/api/report`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    removeSpinner('report2');
+    btn.disabled = false;
+    btn.textContent = '신고 제출 — AI 탐색 시작';
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`HTTP ${res.status}: ${err.slice(0,100)}`);
+    }
+
+    const data = await res.json();
+    populateReportDone(data);
+    goToScreen('report_done');
+    showToast('케이스 ' + data.report_id + ' 생성 완료', 'success');
+
+  } catch (e) {
+    removeSpinner('report2');
+    btn.disabled = false;
+    btn.textContent = '신고 제출 — AI 탐색 시작';
+    showToast('신고 실패: ' + e.message);
+  }
+}
+
+function populateReportDone(data) {
+  resultCaseId = data.report_id;
+  currentCaseId = data.report_id;
+
+  document.getElementById('result-case-id').textContent = data.report_id || '—';
+  document.getElementById('result-scan-time').textContent = data.scan_time ? `${data.scan_time} 접수` : '접수 완료';
+  document.getElementById('result-total').textContent = data.total_scanned ?? '—';
+  document.getElementById('result-suspicious').textContent = data.suspicious_count ?? '—';
+  document.getElementById('result-max-sim').textContent = data.max_similarity ? data.max_similarity + '%' : '—';
+  document.getElementById('result-police').textContent = data.police_station || '확인 중...';
+
+  // 상위 매물 3건 렌더
+  const container = document.getElementById('result-listings');
+  const listings = (data.scan_results || []).slice(0, 3);
+  if (listings.length === 0) {
+    container.innerHTML = `<p style="color:#6B7280;font-size:11px;text-align:center;padding:8px 0">탐지된 의심 매물 없음</p>`;
+    return;
+  }
+  container.innerHTML = listings.map(l => renderListing(l)).join('');
+}
+
+// ═══════════════════════════════════════════════
+// #12 케이스 상세 — GET /api/case/{id}/listings
+// ═══════════════════════════════════════════════
+async function loadCaseDetail(caseId) {
+  if (!caseId) {
+    // 케이스 ID 없으면 목록에서 첫 번째 찾기
+    await loadDashboard();
+    if (dashboardCases.length > 0) {
+      caseId = dashboardCases[0].case_id;
+    } else {
+      document.getElementById('case-detail-content').innerHTML = `<div class="empty-state">
+        <p class="empty-state-title">케이스 없음</p>
+        <p class="empty-state-sub">도난 신고 후 케이스가 생성됩니다</p>
+      </div>`;
+      goToScreen('case_detail');
+      return;
+    }
+  }
+
+  currentCaseId = caseId;
+  document.getElementById('detail-case-id').textContent = caseId;
+
+  const content = document.getElementById('case-detail-content');
+  content.innerHTML = `<div class="empty-state">
+    <div class="spinner" style="width:20px;height:20px;border-width:2px"></div>
+    <p style="color:#6B7280;font-size:11px;margin-top:8px">매물 불러오는 중...</p>
+  </div>`;
+
+  goToScreen('case_detail');
+
+  // 케이스 선택기 — 복수 케이스 있을 때
+  if (dashboardCases.length > 1) {
+    const wrap = document.getElementById('case-selector-wrap');
+    const sel = document.getElementById('case-selector');
+    wrap.style.display = 'block';
+    sel.innerHTML = dashboardCases.map(c =>
+      `<option value="${c.case_id}" ${c.case_id === caseId ? 'selected' : ''}>${c.case_id} — ${c.brand} ${c.model}</option>`
+    ).join('');
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/case/${encodeURIComponent(caseId)}/listings`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    const listings = data.listings || [];
+    const status = (dashboardCases.find(c => c.case_id === caseId) || {}).status || 'active';
+    const statusText = status === 'active' ? '진행중' : status === 'found' ? '회수됨' : status;
+    document.getElementById('detail-status').textContent = statusText;
+
+    if (listings.length === 0) {
+      content.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B5563" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+        <p class="empty-state-title">탐지된 매물 없음</p>
+        <p class="empty-state-sub">AI가 계속 감시 중입니다<br>의심 매물 발견 시 이메일로 알림</p>
+      </div>
+      <button class="btn-full-outline" onclick="loadCaseDetail('${caseId}')" style="margin-top:8px">새로고침</button>`;
+      return;
+    }
+
+    // 정렬: 유사도 내림차순
+    listings.sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
+
+    content.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <p style="color:#9CA3AF;font-size:11px">총 ${listings.length}건 탐지</p>
+        <button onclick="loadCaseDetail('${caseId}')" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:7px;padding:4px 10px;color:#818CF8;font-size:10px;cursor:pointer">새로고침</button>
+      </div>
+      ${listings.map(l => renderListing(l)).join('')}
+      <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:10px;padding:10px 12px;margin-top:4px">
+        <p style="color:#4B5563;font-size:10px;line-height:1.5">AI 추정치입니다. 실제 도난품이 아닐 수 있습니다. 직접 확인 후 경찰에 신고하세요.</p>
+      </div>`;
+
+  } catch (e) {
+    content.innerHTML = `<div class="empty-state">
+      <p class="empty-state-title" style="color:#EF4444">불러오기 실패</p>
+      <p class="empty-state-sub">${e.message}</p>
+      <button class="btn-full-outline" onclick="loadCaseDetail('${caseId}')" style="margin-top:8px">재시도</button>
+    </div>`;
+    showToast('케이스 로드 실패: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// 매물 카드 렌더 헬퍼
+// ═══════════════════════════════════════════════
+function renderListing(l) {
+  const sim = l.similarity || 0;
+  const cls = simBadgeClass(sim);
+  const img = l.image
+    ? `<img src="${l.image}" alt="매물 사진" style="width:100%;height:100%;object-fit:cover">`
+    : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4B5563" stroke-width="1.5"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6l-4 11h-2"/></svg>`;
+  const url = l.url && l.url !== '#' ? `href="${l.url}" target="_blank" rel="noopener"` : '';
+  const warning = l.warning ? `<p style="color:#FBBF24;font-size:9px;margin-top:3px">${l.warning.replace('[주의] ','')}</p>` : '';
+  return `<a ${url} style="text-decoration:none;display:block" class="listing">
+    <div class="listing-img">${img}</div>
+    <div class="listing-info">
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
+        <span style="color:#6B7280;font-size:9px">${l.platform || '—'}</span>
+        <span class="sim-badge ${cls}">${sim}%</span>
+        ${l.is_ai_estimate ? '<span style="color:#4B5563;font-size:9px">AI추정</span>' : ''}
+      </div>
+      <p style="color:#E5E7EB;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.title || '—'}</p>
+      <p style="color:#9CA3AF;font-size:11px;margin-top:2px">${l.price || ''} · ${l.location || ''}</p>
+      ${warning}
+    </div>
+  </a>`;
+}
+
+// ═══════════════════════════════════════════════
+// 사이드바 토글
+// ═══════════════════════════════════════════════
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════════
+// 초기화
+// ═══════════════════════════════════════════════
+loadDashboard();
+</script>
+</body>
+</html>

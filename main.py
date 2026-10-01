@@ -1258,6 +1258,9 @@ async def healthcheck():
         "db": "connected" if db_ok else "error",
         "scheduler": f"running ({active_jobs} jobs)",
         "version": "1.0.0",
+        # Render 런타임이 주입하는 배포 커밋. 배포 반영 여부 확인용
+        "commit": os.environ.get("RENDER_GIT_COMMIT", "local")[:7],
+        "cctv_db": cctv_service.db_available(),
         "uptime_seconds": uptime_seconds,
     })
 
