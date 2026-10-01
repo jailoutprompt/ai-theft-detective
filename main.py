@@ -22,6 +22,15 @@ import time as _time
 from datetime import datetime, timedelta
 from typing import Optional
 
+# 서버 시간대를 한국 시간으로 고정한다.
+# Render 서버는 UTC라서 사용자가 입력한 한국 시각과 datetime.now() 가 9시간 어긋났다
+# (경과일·열람 잔여일·사건 기록 시각이 틀어짐). tzdata 없이도 동작하는 POSIX 표기를 쓴다.
+os.environ["TZ"] = os.environ.get("APP_TZ", "KST-9")
+try:
+    _time.tzset()
+except AttributeError:  # Windows
+    pass
+
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -1516,6 +1525,8 @@ async def healthcheck():
         "version": "1.0.0",
         # Render 런타임이 주입하는 배포 커밋. 배포 반영 여부 확인용
         "commit": os.environ.get("RENDER_GIT_COMMIT", "local")[:7],
+        "server_time": datetime.now().isoformat(sep=" ", timespec="seconds"),
+        "tz": _time.strftime("%Z"),
         "cctv_db": cctv_service.db_available(),
         "uptime_seconds": uptime_seconds,
     })

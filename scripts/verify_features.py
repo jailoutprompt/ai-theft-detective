@@ -227,6 +227,12 @@ def jcall(path, body=None, method=None):
 
 def t0_pages():
     print("\n[0] 화면 — 사용자 앱·도난 대응 화면 배포 여부")
+    h = get("/healthcheck")
+    try:
+        gap = abs((datetime.strptime(h.get("server_time", ""), "%Y-%m-%d %H:%M:%S") - datetime.now()).total_seconds())
+    except ValueError:
+        gap = 1e9
+    check("서버 시각이 한국 시간과 일치 (±3분)", gap <= 180, f"server={h.get('server_time')} tz={h.get('tz')} 차이 {int(gap)}초")
     st, _, _ = raw("/app")
     check("사용자 앱 /app 응답 200", st == 200, f"HTTP {st}")
     st, _, b = raw("/service")
