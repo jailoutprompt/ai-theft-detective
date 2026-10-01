@@ -11,7 +11,9 @@
 
 LLM 은 사용하지 않는다. 모든 값이 좌표·공공데이터·경과시간에서 계산된다.
 """
-from datetime import datetime, timedelta
+from datetime import timedelta
+
+from .clock import datetime
 from typing import Optional
 
 from . import cctv_service, movement_service

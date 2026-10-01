@@ -12,7 +12,7 @@
 어떤 계산으로 나온 수치인지 확인할 수 있게 한다.
 """
 import math
-from datetime import datetime
+from .clock import datetime
 from typing import Optional
 
 # 중고거래 거점: 실제 중고 매물 밀집도가 높은 지역

@@ -24,7 +24,9 @@
 """
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import timedelta
+
+from .clock import datetime
 from typing import Optional
 
 from sqlalchemy import Column, DateTime, Float, Integer, String, Text
