@@ -1309,7 +1309,7 @@ async def generate_112_pdf(request: Request):
 
 # ============================================================
 # 이동 패턴 예측
-#   거리 감쇠 x 중고거래 거점 가중치 x 경과시간 기반 규칙 산출
+#   거리 감쇠 x 시군구 절도 발생 건수(2024 경찰청) x 경과시간 기반 규칙 산출
 # ============================================================
 @app.post("/api/predict-movement")
 async def predict_movement(request: Request):

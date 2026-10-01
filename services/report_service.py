@@ -51,7 +51,8 @@ def build_evidence_pack(lat: float, lng: float,
     if summary["min_retention_days"]:
         deadline_dt = t0 + timedelta(days=summary["min_retention_days"])
         deadline = deadline_dt.strftime("%Y-%m-%d")
-        days_left = (deadline_dt - now).days
+        # 달력 날짜 기준 (시각 차이로 floor 하면 기한 경과 시 하루가 더 빠짐)
+        days_left = (deadline_dt.date() - now.date()).days
 
     # 3) 우선 수색 지역
     move = movement_service.predict(lat, lng, hours_elapsed=hours, top_n=5)
@@ -104,7 +105,9 @@ def _checklist(cctvs: list, days_left: Optional[int]) -> list:
         })
     if days_left is not None and days_left <= 7:
         items.insert(0, {
-            "item": f"CCTV 열람 신청 마감 임박 (잔여 {days_left}일)",
+            "item": (f"CCTV 열람 신청 마감 임박 (잔여 {days_left}일)" if days_left > 0 else
+                     "CCTV 열람 신청 오늘 마감" if days_left == 0 else
+                     f"CCTV 보관기간 경과 ({-days_left}일 지남) — 관리기관에 영상 보존 여부 즉시 확인"),
             "done": False,
             "why": "보관기간 경과 시 영상이 자동 삭제됨",
             "urgent": True,
@@ -122,7 +125,9 @@ def format_for_pdf(pack: dict) -> list:
         top = c["agencies"][0]
         rows.append(["최근접 관리기관", f'{top["agency"]} ({top["tel"] or "연락처 미등록"})'])
     if c["request_deadline"]:
-        left = f' (잔여 {c["days_left"]}일)' if c["days_left"] is not None else ""
+        dl = c["days_left"]
+        left = ("" if dl is None else f" (잔여 {dl}일)" if dl > 0 else " (오늘 마감)" if dl == 0
+                else f" (기한 {-dl}일 경과)")
         rows.append(["CCTV 열람 마감", f'{c["request_deadline"]}{left}'])
     if c["request_window"]:
         rows.append(["열람 요청 구간", f'{c["request_window"]["from"]} ~ {c["request_window"]["to"]}'])

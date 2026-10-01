@@ -1,0 +1,2066 @@
+{
+ "meta": {
+  "built_at": "2026-10-01 23:35",
+  "weight": "2024년 시군구별 절도범죄 발생 건수 (경찰청)",
+  "weight_source": "경찰청_범죄 발생 지역별 통계_20241231 (공공데이터포털 3074462, 이용허락범위 제한 없음)",
+  "weight_source_url": "https://www.data.go.kr/data/3074462/fileData.do",
+  "weight_note": "자전거 절도만 분리한 시군구 단위 공개 통계를 찾지 못해 절도범죄 전체 발생 건수를 대리 지표로 사용",
+  "coord_source": "공공데이터포털 「전국 CCTV 표준데이터」 좌표의 시군구별 중앙값",
+  "regions_in_source": 230,
+  "regions_used": 227,
+  "regions_missing": [
+   "인천 동구",
+   "울산 울주군",
+   "경북 군위군"
+  ],
+  "theft_total_used": 182786,
+  "cctv_rows": 377243,
+  "cctv_rows_matched": 372457,
+  "cctv_rows_matched_by_agency": 12011
+ },
+ "regions": [
+  {
+   "region": "경기 수원시",
+   "sido": "경기도",
+   "sigungu": "수원시",
+   "lat": 37.27397,
+   "lng": 127.01665,
+   "theft_2024": 5042,
+   "cctv_points": 4930
+  },
+  {
+   "region": "충북 청주시",
+   "sido": "충북",
+   "sigungu": "청주시",
+   "lat": 36.63536,
+   "lng": 127.47066,
+   "theft_2024": 3788,
+   "cctv_points": 2583
+  },
+  {
+   "region": "경남 창원시",
+   "sido": "경남",
+   "sigungu": "창원시",
+   "lat": 35.22002,
+   "lng": 128.6414,
+   "theft_2024": 3665,
+   "cctv_points": 3734
+  },
+  {
+   "region": "경기 부천시",
+   "sido": "경기도",
+   "sigungu": "부천시",
+   "lat": 37.49492,
+   "lng": 126.78748,
+   "theft_2024": 3659,
+   "cctv_points": 2175
+  },
+  {
+   "region": "경기 용인시",
+   "sido": "경기도",
+   "sigungu": "용인시",
+   "lat": 37.27847,
+   "lng": 127.12046,
+   "theft_2024": 3200,
+   "cctv_points": 3975
+  },
+  {
+   "region": "경기 성남시",
+   "sido": "경기도",
+   "sigungu": "성남시",
+   "lat": 37.42283,
+   "lng": 127.13008,
+   "theft_2024": 3074,
+   "cctv_points": 2954
+  },
+  {
+   "region": "경남 진주시",
+   "sido": "경남",
+   "sigungu": "진주시",
+   "lat": 35.18212,
+   "lng": 128.10342,
+   "theft_2024": 3046,
+   "cctv_points": 1769
+  },
+  {
+   "region": "충남 천안시",
+   "sido": "충남",
+   "sigungu": "천안시",
+   "lat": 36.81035,
+   "lng": 127.1428,
+   "theft_2024": 2942,
+   "cctv_points": 7323
+  },
+  {
+   "region": "경기 화성시",
+   "sido": "경기도",
+   "sigungu": "화성시",
+   "lat": 37.25556,
+   "lng": 126.95002,
+   "theft_2024": 2895,
+   "cctv_points": 2
+  },
+  {
+   "region": "경기 안산시",
+   "sido": "경기도",
+   "sigungu": "안산시",
+   "lat": 37.31672,
+   "lng": 126.84056,
+   "theft_2024": 2722,
+   "cctv_points": 2901
+  },
+  {
+   "region": "부산 부산진구",
+   "sido": "부산",
+   "sigungu": "부산진구",
+   "lat": 35.15896,
+   "lng": 129.0496,
+   "theft_2024": 2678,
+   "cctv_points": 1017
+  },
+  {
+   "region": "전북 전주시",
+   "sido": "전북",
+   "sigungu": "전주시",
+   "lat": 35.829,
+   "lng": 127.1291,
+   "theft_2024": 2667,
+   "cctv_points": 1938
+  },
+  {
+   "region": "경기 고양시",
+   "sido": "경기도",
+   "sigungu": "고양시",
+   "lat": 37.66099,
+   "lng": 126.81731,
+   "theft_2024": 2645,
+   "cctv_points": 2356
+  },
+  {
+   "region": "서울 송파구",
+   "sido": "서울",
+   "sigungu": "송파구",
+   "lat": 37.50219,
+   "lng": 127.12,
+   "theft_2024": 2500,
+   "cctv_points": 1977
+  },
+  {
+   "region": "경기 평택시",
+   "sido": "경기도",
+   "sigungu": "평택시",
+   "lat": 37.01988,
+   "lng": 127.0516,
+   "theft_2024": 2436,
+   "cctv_points": 3306
+  },
+  {
+   "region": "경남 김해시",
+   "sido": "경남",
+   "sigungu": "김해시",
+   "lat": 35.23643,
+   "lng": 128.8502,
+   "theft_2024": 2429,
+   "cctv_points": 6230
+  },
+  {
+   "region": "제주 제주시",
+   "sido": "제주",
+   "sigungu": "제주시",
+   "lat": 33.49151,
+   "lng": 126.51648,
+   "theft_2024": 2257,
+   "cctv_points": 362
+  },
+  {
+   "region": "인천 부평구",
+   "sido": "인천",
+   "sigungu": "부평구",
+   "lat": 37.49598,
+   "lng": 126.7227,
+   "theft_2024": 2143,
+   "cctv_points": 1513
+  },
+  {
+   "region": "서울 강남구",
+   "sido": "서울",
+   "sigungu": "강남구",
+   "lat": 37.5008,
+   "lng": 127.05005,
+   "theft_2024": 2094,
+   "cctv_points": 2672
+  },
+  {
+   "region": "서울 관악구",
+   "sido": "서울",
+   "sigungu": "관악구",
+   "lat": 37.47794,
+   "lng": 126.93485,
+   "theft_2024": 1967,
+   "cctv_points": 2106
+  },
+  {
+   "region": "대구 달서구",
+   "sido": "대구",
+   "sigungu": "달서구",
+   "lat": 35.84039,
+   "lng": 128.53565,
+   "theft_2024": 1965,
+   "cctv_points": 3264
+  },
+  {
+   "region": "경기 김포시",
+   "sido": "경기도",
+   "sigungu": "김포시",
+   "lat": 37.6393,
+   "lng": 126.67353,
+   "theft_2024": 1964,
+   "cctv_points": 1680
+  },
+  {
+   "region": "경북 포항시",
+   "sido": "경북",
+   "sigungu": "포항시",
+   "lat": 36.0287,
+   "lng": 129.3657,
+   "theft_2024": 1923,
+   "cctv_points": 1594
+  },
+  {
+   "region": "광주 북구",
+   "sido": "광주",
+   "sigungu": "북구",
+   "lat": 35.1788,
+   "lng": 126.9072,
+   "theft_2024": 1877,
+   "cctv_points": 441
+  },
+  {
+   "region": "대전 서구",
+   "sido": "대전",
+   "sigungu": "서구",
+   "lat": 36.32988,
+   "lng": 127.37233,
+   "theft_2024": 1873,
+   "cctv_points": 882
+  },
+  {
+   "region": "서울 영등포구",
+   "sido": "서울",
+   "sigungu": "영등포구",
+   "lat": 37.51196,
+   "lng": 126.9042,
+   "theft_2024": 1790,
+   "cctv_points": 5515
+  },
+  {
+   "region": "경북 구미시",
+   "sido": "경북",
+   "sigungu": "구미시",
+   "lat": 36.1266,
+   "lng": 128.364,
+   "theft_2024": 1754,
+   "cctv_points": 155
+  },
+  {
+   "region": "경기 시흥시",
+   "sido": "경기도",
+   "sigungu": "시흥시",
+   "lat": 37.37826,
+   "lng": 126.78108,
+   "theft_2024": 1726,
+   "cctv_points": 2130
+  },
+  {
+   "region": "부산 해운대구",
+   "sido": "부산",
+   "sigungu": "해운대구",
+   "lat": 35.18802,
+   "lng": 129.14892,
+   "theft_2024": 1674,
+   "cctv_points": 805
+  },
+  {
+   "region": "서울 강서구",
+   "sido": "서울",
+   "sigungu": "강서구",
+   "lat": 37.55259,
+   "lng": 126.84161,
+   "theft_2024": 1671,
+   "cctv_points": 2135
+  },
+  {
+   "region": "서울 강동구",
+   "sido": "서울",
+   "sigungu": "강동구",
+   "lat": 37.54722,
+   "lng": 127.13935,
+   "theft_2024": 1662,
+   "cctv_points": 1465
+  },
+  {
+   "region": "광주 광산구",
+   "sido": "광주",
+   "sigungu": "광산구",
+   "lat": 35.177,
+   "lng": 126.813,
+   "theft_2024": 1658,
+   "cctv_points": 1201
+  },
+  {
+   "region": "서울 동대문구",
+   "sido": "서울",
+   "sigungu": "동대문구",
+   "lat": 37.5791,
+   "lng": 127.057,
+   "theft_2024": 1618,
+   "cctv_points": 1368
+  },
+  {
+   "region": "경기 안양시",
+   "sido": "경기도",
+   "sigungu": "안양시",
+   "lat": 37.39809,
+   "lng": 126.93589,
+   "theft_2024": 1596,
+   "cctv_points": 1749
+  },
+  {
+   "region": "서울 서초구",
+   "sido": "서울",
+   "sigungu": "서초구",
+   "lat": 37.4863,
+   "lng": 127.013,
+   "theft_2024": 1587,
+   "cctv_points": 6397
+  },
+  {
+   "region": "서울 구로구",
+   "sido": "서울",
+   "sigungu": "구로구",
+   "lat": 37.49445,
+   "lng": 126.86456,
+   "theft_2024": 1572,
+   "cctv_points": 2132
+  },
+  {
+   "region": "경기 남양주시",
+   "sido": "경기도",
+   "sigungu": "남양주시",
+   "lat": 37.65419,
+   "lng": 127.19992,
+   "theft_2024": 1566,
+   "cctv_points": 1948
+  },
+  {
+   "region": "대구 북구",
+   "sido": "대구",
+   "sigungu": "북구",
+   "lat": 35.90173,
+   "lng": 128.58597,
+   "theft_2024": 1553,
+   "cctv_points": 2237
+  },
+  {
+   "region": "서울 은평구",
+   "sido": "서울",
+   "sigungu": "은평구",
+   "lat": 37.60763,
+   "lng": 126.91952,
+   "theft_2024": 1520,
+   "cctv_points": 1836
+  },
+  {
+   "region": "서울 양천구",
+   "sido": "서울",
+   "sigungu": "양천구",
+   "lat": 37.52549,
+   "lng": 126.85539,
+   "theft_2024": 1513,
+   "cctv_points": 4795
+  },
+  {
+   "region": "서울 노원구",
+   "sido": "서울",
+   "sigungu": "노원구",
+   "lat": 37.64799,
+   "lng": 127.0704,
+   "theft_2024": 1506,
+   "cctv_points": 4240
+  },
+  {
+   "region": "경기 의정부시",
+   "sido": "경기도",
+   "sigungu": "의정부시",
+   "lat": 37.74117,
+   "lng": 127.0506,
+   "theft_2024": 1475,
+   "cctv_points": 1649
+  },
+  {
+   "region": "서울 마포구",
+   "sido": "서울",
+   "sigungu": "마포구",
+   "lat": 37.55434,
+   "lng": 126.9228,
+   "theft_2024": 1469,
+   "cctv_points": 1565
+  },
+  {
+   "region": "인천 미추홀구",
+   "sido": "인천",
+   "sigungu": "미추홀구",
+   "lat": 37.455,
+   "lng": 126.66,
+   "theft_2024": 1444,
+   "cctv_points": 3176
+  },
+  {
+   "region": "서울 중랑구",
+   "sido": "서울",
+   "sigungu": "중랑구",
+   "lat": 37.59528,
+   "lng": 127.08708,
+   "theft_2024": 1439,
+   "cctv_points": 2054
+  },
+  {
+   "region": "경기 파주시",
+   "sido": "경기도",
+   "sigungu": "파주시",
+   "lat": 37.7615,
+   "lng": 126.77407,
+   "theft_2024": 1421,
+   "cctv_points": 2320
+  },
+  {
+   "region": "서울 중구",
+   "sido": "서울",
+   "sigungu": "중구",
+   "lat": 37.56088,
+   "lng": 127.0036,
+   "theft_2024": 1410,
+   "cctv_points": 1191
+  },
+  {
+   "region": "경남 양산시",
+   "sido": "경남",
+   "sigungu": "양산시",
+   "lat": 35.34444,
+   "lng": 129.03852,
+   "theft_2024": 1380,
+   "cctv_points": 1427
+  },
+  {
+   "region": "인천 서구",
+   "sido": "인천",
+   "sigungu": "서구",
+   "lat": 37.54702,
+   "lng": 126.70751,
+   "theft_2024": 1356,
+   "cctv_points": 2
+  },
+  {
+   "region": "서울 광진구",
+   "sido": "서울",
+   "sigungu": "광진구",
+   "lat": 37.54783,
+   "lng": 127.08409,
+   "theft_2024": 1321,
+   "cctv_points": 1304
+  },
+  {
+   "region": "부산 동래구",
+   "sido": "부산",
+   "sigungu": "동래구",
+   "lat": 35.20315,
+   "lng": 129.08498,
+   "theft_2024": 1264,
+   "cctv_points": 918
+  },
+  {
+   "region": "광주 서구",
+   "sido": "광주",
+   "sigungu": "서구",
+   "lat": 35.15013,
+   "lng": 126.8629,
+   "theft_2024": 1246,
+   "cctv_points": 51
+  },
+  {
+   "region": "대구 동구",
+   "sido": "대구",
+   "sigungu": "동구",
+   "lat": 35.87992,
+   "lng": 128.66015,
+   "theft_2024": 1244,
+   "cctv_points": 1941
+  },
+  {
+   "region": "인천 남동구",
+   "sido": "인천",
+   "sigungu": "남동구",
+   "lat": 37.45004,
+   "lng": 126.72044,
+   "theft_2024": 1242,
+   "cctv_points": 1499
+  },
+  {
+   "region": "충남 아산시",
+   "sido": "충남",
+   "sigungu": "아산시",
+   "lat": 36.78521,
+   "lng": 127.01119,
+   "theft_2024": 1189,
+   "cctv_points": 4371
+  },
+  {
+   "region": "대구 중구",
+   "sido": "대구",
+   "sigungu": "중구",
+   "lat": 35.86581,
+   "lng": 128.59302,
+   "theft_2024": 1188,
+   "cctv_points": 935
+  },
+  {
+   "region": "인천 연수구",
+   "sido": "인천",
+   "sigungu": "연수구",
+   "lat": 37.42246,
+   "lng": 126.6699,
+   "theft_2024": 1185,
+   "cctv_points": 2187
+  },
+  {
+   "region": "서울 종로구",
+   "sido": "서울",
+   "sigungu": "종로구",
+   "lat": 37.5784,
+   "lng": 126.9854,
+   "theft_2024": 1180,
+   "cctv_points": 1223
+  },
+  {
+   "region": "대전 중구",
+   "sido": "대전",
+   "sigungu": "중구",
+   "lat": 36.31646,
+   "lng": 127.41012,
+   "theft_2024": 1172,
+   "cctv_points": 5551
+  },
+  {
+   "region": "부산 북구",
+   "sido": "부산",
+   "sigungu": "북구",
+   "lat": 35.2106,
+   "lng": 129.011,
+   "theft_2024": 1137,
+   "cctv_points": 887
+  },
+  {
+   "region": "강원 원주시",
+   "sido": "강원도",
+   "sigungu": "원주시",
+   "lat": 37.34037,
+   "lng": 127.94176,
+   "theft_2024": 1125,
+   "cctv_points": 1776
+  },
+  {
+   "region": "세종시",
+   "sido": "세종",
+   "sigungu": "세종시",
+   "lat": 36.50792,
+   "lng": 127.2713,
+   "theft_2024": 1117,
+   "cctv_points": 1680
+  },
+  {
+   "region": "서울 동작구",
+   "sido": "서울",
+   "sigungu": "동작구",
+   "lat": 37.49779,
+   "lng": 126.94703,
+   "theft_2024": 1091,
+   "cctv_points": 890
+  },
+  {
+   "region": "서울 용산구",
+   "sido": "서울",
+   "sigungu": "용산구",
+   "lat": 37.5375,
+   "lng": 126.97695,
+   "theft_2024": 1072,
+   "cctv_points": 1930
+  },
+  {
+   "region": "대전 유성구",
+   "sido": "대전",
+   "sigungu": "유성구",
+   "lat": 36.36172,
+   "lng": 127.33485,
+   "theft_2024": 1064,
+   "cctv_points": 590
+  },
+  {
+   "region": "경북 경주시",
+   "sido": "경북",
+   "sigungu": "경주시",
+   "lat": 35.8467,
+   "lng": 129.2211,
+   "theft_2024": 1054,
+   "cctv_points": 2812
+  },
+  {
+   "region": "전북 익산시",
+   "sido": "전북",
+   "sigungu": "익산시",
+   "lat": 35.95341,
+   "lng": 126.9609,
+   "theft_2024": 1026,
+   "cctv_points": 1055
+  },
+  {
+   "region": "대구 서구",
+   "sido": "대구",
+   "sigungu": "서구",
+   "lat": 35.87514,
+   "lng": 128.56197,
+   "theft_2024": 1025,
+   "cctv_points": 5249
+  },
+  {
+   "region": "대전 동구",
+   "sido": "대전",
+   "sigungu": "동구",
+   "lat": 36.33365,
+   "lng": 127.447,
+   "theft_2024": 1023,
+   "cctv_points": 920
+  },
+  {
+   "region": "경기 광주시",
+   "sido": "경기도",
+   "sigungu": "광주시",
+   "lat": 37.39538,
+   "lng": 127.25491,
+   "theft_2024": 1015,
+   "cctv_points": 1855
+  },
+  {
+   "region": "서울 서대문구",
+   "sido": "서울",
+   "sigungu": "서대문구",
+   "lat": 37.5781,
+   "lng": 126.9368,
+   "theft_2024": 1012,
+   "cctv_points": 1292
+  },
+  {
+   "region": "대구 수성구",
+   "sido": "대구",
+   "sigungu": "수성구",
+   "lat": 35.8455,
+   "lng": 128.6375,
+   "theft_2024": 990,
+   "cctv_points": 3751
+  },
+  {
+   "region": "서울 성동구",
+   "sido": "서울",
+   "sigungu": "성동구",
+   "lat": 37.553,
+   "lng": 127.04044,
+   "theft_2024": 968,
+   "cctv_points": 1314
+  },
+  {
+   "region": "서울 강북구",
+   "sido": "서울",
+   "sigungu": "강북구",
+   "lat": 37.63035,
+   "lng": 127.02143,
+   "theft_2024": 968,
+   "cctv_points": 4595
+  },
+  {
+   "region": "전남 목포시",
+   "sido": "전남",
+   "sigungu": "목포시",
+   "lat": 34.80313,
+   "lng": 126.39438,
+   "theft_2024": 963,
+   "cctv_points": 935
+  },
+  {
+   "region": "울산 남구",
+   "sido": "울산",
+   "sigungu": "남구",
+   "lat": 35.5376,
+   "lng": 129.31696,
+   "theft_2024": 955,
+   "cctv_points": 1283
+  },
+  {
+   "region": "경기 오산시",
+   "sido": "경기도",
+   "sigungu": "오산시",
+   "lat": 37.15764,
+   "lng": 127.06299,
+   "theft_2024": 953,
+   "cctv_points": 655
+  },
+  {
+   "region": "부산 사하구",
+   "sido": "부산",
+   "sigungu": "사하구",
+   "lat": 35.0925,
+   "lng": 128.97727,
+   "theft_2024": 952,
+   "cctv_points": 1037
+  },
+  {
+   "region": "경북 경산시",
+   "sido": "경북",
+   "sigungu": "경산시",
+   "lat": 35.82997,
+   "lng": 128.76019,
+   "theft_2024": 921,
+   "cctv_points": 3912
+  },
+  {
+   "region": "대구 달성군",
+   "sido": "대구",
+   "sigungu": "달성군",
+   "lat": 35.77285,
+   "lng": 128.45587,
+   "theft_2024": 912,
+   "cctv_points": 1670
+  },
+  {
+   "region": "서울 금천구",
+   "sido": "서울",
+   "sigungu": "금천구",
+   "lat": 37.46258,
+   "lng": 126.90364,
+   "theft_2024": 887,
+   "cctv_points": 935
+  },
+  {
+   "region": "서울 성북구",
+   "sido": "서울",
+   "sigungu": "성북구",
+   "lat": 37.60491,
+   "lng": 127.02338,
+   "theft_2024": 884,
+   "cctv_points": 1714
+  },
+  {
+   "region": "부산 금정구",
+   "sido": "부산",
+   "sigungu": "금정구",
+   "lat": 35.22742,
+   "lng": 129.09342,
+   "theft_2024": 878,
+   "cctv_points": 1341
+  },
+  {
+   "region": "경기 군포시",
+   "sido": "경기도",
+   "sigungu": "군포시",
+   "lat": 37.35534,
+   "lng": 126.93948,
+   "theft_2024": 876,
+   "cctv_points": 854
+  },
+  {
+   "region": "경기 하남시",
+   "sido": "경기도",
+   "sigungu": "하남시",
+   "lat": 37.5399,
+   "lng": 127.1981,
+   "theft_2024": 876,
+   "cctv_points": 3722
+  },
+  {
+   "region": "경기 광명시",
+   "sido": "경기도",
+   "sigungu": "광명시",
+   "lat": 37.46504,
+   "lng": 126.87012,
+   "theft_2024": 872,
+   "cctv_points": 277
+  },
+  {
+   "region": "부산 남구",
+   "sido": "부산",
+   "sigungu": "남구",
+   "lat": 35.1312,
+   "lng": 129.0903,
+   "theft_2024": 862,
+   "cctv_points": 2074
+  },
+  {
+   "region": "경남 거제시",
+   "sido": "경남",
+   "sigungu": "거제시",
+   "lat": 34.88741,
+   "lng": 128.63683,
+   "theft_2024": 856,
+   "cctv_points": 892
+  },
+  {
+   "region": "부산 연제구",
+   "sido": "부산",
+   "sigungu": "연제구",
+   "lat": 35.18409,
+   "lng": 129.08595,
+   "theft_2024": 833,
+   "cctv_points": 1022
+  },
+  {
+   "region": "인천 계양구",
+   "sido": "인천",
+   "sigungu": "계양구",
+   "lat": 37.5416,
+   "lng": 126.73041,
+   "theft_2024": 825,
+   "cctv_points": 1497
+  },
+  {
+   "region": "강원 춘천시",
+   "sido": "강원도",
+   "sigungu": "춘천시",
+   "lat": 37.87463,
+   "lng": 127.7351,
+   "theft_2024": 817,
+   "cctv_points": 2690
+  },
+  {
+   "region": "서울 도봉구",
+   "sido": "서울",
+   "sigungu": "도봉구",
+   "lat": 37.65669,
+   "lng": 127.0393,
+   "theft_2024": 800,
+   "cctv_points": 3113
+  },
+  {
+   "region": "부산 사상구",
+   "sido": "부산",
+   "sigungu": "사상구",
+   "lat": 35.15765,
+   "lng": 128.98839,
+   "theft_2024": 797,
+   "cctv_points": 1230
+  },
+  {
+   "region": "부산 수영구",
+   "sido": "부산",
+   "sigungu": "수영구",
+   "lat": 35.16257,
+   "lng": 129.11338,
+   "theft_2024": 795,
+   "cctv_points": 1877
+  },
+  {
+   "region": "인천 중구",
+   "sido": "인천",
+   "sigungu": "중구",
+   "lat": 37.47052,
+   "lng": 126.61239,
+   "theft_2024": 791,
+   "cctv_points": 166
+  },
+  {
+   "region": "제주 서귀포시",
+   "sido": "제주",
+   "sigungu": "서귀포시",
+   "lat": 33.26156,
+   "lng": 126.56022,
+   "theft_2024": 791,
+   "cctv_points": 681
+  },
+  {
+   "region": "전남 순천시",
+   "sido": "전남",
+   "sigungu": "순천시",
+   "lat": 34.948,
+   "lng": 127.494,
+   "theft_2024": 765,
+   "cctv_points": 3980
+  },
+  {
+   "region": "광주 남구",
+   "sido": "광주",
+   "sigungu": "남구",
+   "lat": 35.12977,
+   "lng": 126.90546,
+   "theft_2024": 759,
+   "cctv_points": 79
+  },
+  {
+   "region": "전북 군산시",
+   "sido": "전북",
+   "sigungu": "군산시",
+   "lat": 35.97035,
+   "lng": 126.71093,
+   "theft_2024": 747,
+   "cctv_points": 3305
+  },
+  {
+   "region": "전남 여수시",
+   "sido": "전남",
+   "sigungu": "여수시",
+   "lat": 34.75326,
+   "lng": 127.70268,
+   "theft_2024": 713,
+   "cctv_points": 1952
+  },
+  {
+   "region": "울산 북구",
+   "sido": "울산",
+   "sigungu": "북구",
+   "lat": 35.60509,
+   "lng": 129.36057,
+   "theft_2024": 712,
+   "cctv_points": 1783
+  },
+  {
+   "region": "대구 남구",
+   "sido": "대구",
+   "sigungu": "남구",
+   "lat": 35.84349,
+   "lng": 128.58249,
+   "theft_2024": 682,
+   "cctv_points": 1014
+  },
+  {
+   "region": "경기 안성시",
+   "sido": "경기도",
+   "sigungu": "안성시",
+   "lat": 37.0139,
+   "lng": 127.264,
+   "theft_2024": 680,
+   "cctv_points": 1590
+  },
+  {
+   "region": "부산 서구",
+   "sido": "부산",
+   "sigungu": "서구",
+   "lat": 35.10266,
+   "lng": 129.01876,
+   "theft_2024": 662,
+   "cctv_points": 585
+  },
+  {
+   "region": "경기 양주시",
+   "sido": "경기도",
+   "sigungu": "양주시",
+   "lat": 37.81978,
+   "lng": 127.04638,
+   "theft_2024": 660,
+   "cctv_points": 1200
+  },
+  {
+   "region": "강원 강릉시",
+   "sido": "강원도",
+   "sigungu": "강릉시",
+   "lat": 37.7601,
+   "lng": 128.895,
+   "theft_2024": 649,
+   "cctv_points": 2292
+  },
+  {
+   "region": "충북 충주시",
+   "sido": "충북",
+   "sigungu": "충주시",
+   "lat": 36.97839,
+   "lng": 127.92529,
+   "theft_2024": 611,
+   "cctv_points": 2082
+  },
+  {
+   "region": "경기 이천시",
+   "sido": "경기도",
+   "sigungu": "이천시",
+   "lat": 37.25724,
+   "lng": 127.4569,
+   "theft_2024": 605,
+   "cctv_points": 4245
+  },
+  {
+   "region": "부산 중구",
+   "sido": "부산",
+   "sigungu": "중구",
+   "lat": 35.10549,
+   "lng": 129.03075,
+   "theft_2024": 574,
+   "cctv_points": 502
+  },
+  {
+   "region": "경기 구리시",
+   "sido": "경기도",
+   "sigungu": "구리시",
+   "lat": 37.59925,
+   "lng": 127.13875,
+   "theft_2024": 572,
+   "cctv_points": 961
+  },
+  {
+   "region": "부산 동구",
+   "sido": "부산",
+   "sigungu": "동구",
+   "lat": 35.1321,
+   "lng": 129.04428,
+   "theft_2024": 567,
+   "cctv_points": 671
+  },
+  {
+   "region": "광주 동구",
+   "sido": "광주",
+   "sigungu": "동구",
+   "lat": 35.14808,
+   "lng": 126.92625,
+   "theft_2024": 560,
+   "cctv_points": 81
+  },
+  {
+   "region": "대전 대덕구",
+   "sido": "대전",
+   "sigungu": "대덕구",
+   "lat": 36.1,
+   "lng": 127.1,
+   "theft_2024": 546,
+   "cctv_points": 1104
+  },
+  {
+   "region": "울산 중구",
+   "sido": "울산",
+   "sigungu": "중구",
+   "lat": 35.56297,
+   "lng": 129.32757,
+   "theft_2024": 530,
+   "cctv_points": 2322
+  },
+  {
+   "region": "울산 동구",
+   "sido": "울산",
+   "sigungu": "동구",
+   "lat": 35.50321,
+   "lng": 129.42509,
+   "theft_2024": 498,
+   "cctv_points": 597
+  },
+  {
+   "region": "부산 기장군",
+   "sido": "부산",
+   "sigungu": "기장군",
+   "lat": 35.27215,
+   "lng": 129.21696,
+   "theft_2024": 448,
+   "cctv_points": 2020
+  },
+  {
+   "region": "부산 강서구",
+   "sido": "부산",
+   "sigungu": "강서구",
+   "lat": 35.1435,
+   "lng": 128.913,
+   "theft_2024": 446,
+   "cctv_points": 1172
+  },
+  {
+   "region": "부산 영도구",
+   "sido": "부산",
+   "sigungu": "영도구",
+   "lat": 35.08791,
+   "lng": 129.05462,
+   "theft_2024": 443,
+   "cctv_points": 915
+  },
+  {
+   "region": "전북 정읍시",
+   "sido": "전북",
+   "sigungu": "정읍시",
+   "lat": 35.57359,
+   "lng": 126.85396,
+   "theft_2024": 443,
+   "cctv_points": 601
+  },
+  {
+   "region": "경남 통영시",
+   "sido": "경남",
+   "sigungu": "통영시",
+   "lat": 34.847,
+   "lng": 128.4189,
+   "theft_2024": 424,
+   "cctv_points": 2736
+  },
+  {
+   "region": "충북 음성군",
+   "sido": "충북",
+   "sigungu": "음성군",
+   "lat": 36.96613,
+   "lng": 127.59356,
+   "theft_2024": 418,
+   "cctv_points": 1985
+  },
+  {
+   "region": "경기 포천시",
+   "sido": "경기도",
+   "sigungu": "포천시",
+   "lat": 37.89491,
+   "lng": 127.20168,
+   "theft_2024": 411,
+   "cctv_points": 2356
+  },
+  {
+   "region": "충북 제천시",
+   "sido": "충북",
+   "sigungu": "제천시",
+   "lat": 37.13416,
+   "lng": 128.2048,
+   "theft_2024": 408,
+   "cctv_points": 1286
+  },
+  {
+   "region": "경북 안동시",
+   "sido": "경북",
+   "sigungu": "안동시",
+   "lat": 36.56559,
+   "lng": 128.71806,
+   "theft_2024": 401,
+   "cctv_points": 5042
+  },
+  {
+   "region": "전남 광양시",
+   "sido": "전남",
+   "sigungu": "광양시",
+   "lat": 34.97046,
+   "lng": 127.65814,
+   "theft_2024": 400,
+   "cctv_points": 148
+  },
+  {
+   "region": "경북 김천시",
+   "sido": "경북",
+   "sigungu": "김천시",
+   "lat": 36.1231,
+   "lng": 128.1181,
+   "theft_2024": 385,
+   "cctv_points": 2676
+  },
+  {
+   "region": "충남 논산시",
+   "sido": "충남",
+   "sigungu": "논산시",
+   "lat": 36.19232,
+   "lng": 127.09738,
+   "theft_2024": 373,
+   "cctv_points": 2835
+  },
+  {
+   "region": "경기 동두천시",
+   "sido": "경기도",
+   "sigungu": "동두천시",
+   "lat": 37.9043,
+   "lng": 127.0561,
+   "theft_2024": 360,
+   "cctv_points": 645
+  },
+  {
+   "region": "경북 상주시",
+   "sido": "경북",
+   "sigungu": "상주시",
+   "lat": 36.41843,
+   "lng": 128.15667,
+   "theft_2024": 357,
+   "cctv_points": 1005
+  },
+  {
+   "region": "전남 나주시",
+   "sido": "전남",
+   "sigungu": "나주시",
+   "lat": 35.0146,
+   "lng": 126.72041,
+   "theft_2024": 352,
+   "cctv_points": 2155
+  },
+  {
+   "region": "충남 서산시",
+   "sido": "충남",
+   "sigungu": "서산시",
+   "lat": 36.78097,
+   "lng": 126.45323,
+   "theft_2024": 349,
+   "cctv_points": 1575
+  },
+  {
+   "region": "경기 과천시",
+   "sido": "경기도",
+   "sigungu": "과천시",
+   "lat": 37.43132,
+   "lng": 126.99728,
+   "theft_2024": 327,
+   "cctv_points": 300
+  },
+  {
+   "region": "충남 당진시",
+   "sido": "충남",
+   "sigungu": "당진시",
+   "lat": 36.8938,
+   "lng": 126.65082,
+   "theft_2024": 314,
+   "cctv_points": 2106
+  },
+  {
+   "region": "경기 여주시",
+   "sido": "경기도",
+   "sigungu": "여주시",
+   "lat": 37.29608,
+   "lng": 127.63484,
+   "theft_2024": 298,
+   "cctv_points": 1670
+  },
+  {
+   "region": "충남 보령시",
+   "sido": "충남",
+   "sigungu": "보령시",
+   "lat": 36.34568,
+   "lng": 126.59675,
+   "theft_2024": 290,
+   "cctv_points": 2308
+  },
+  {
+   "region": "경기 양평군",
+   "sido": "경기도",
+   "sigungu": "양평군",
+   "lat": 37.4929,
+   "lng": 127.49947,
+   "theft_2024": 288,
+   "cctv_points": 1120
+  },
+  {
+   "region": "경북 영천시",
+   "sido": "경북",
+   "sigungu": "영천시",
+   "lat": 35.97294,
+   "lng": 128.93456,
+   "theft_2024": 282,
+   "cctv_points": 2495
+  },
+  {
+   "region": "경북 칠곡군",
+   "sido": "경북",
+   "sigungu": "칠곡군",
+   "lat": 36.02357,
+   "lng": 128.40305,
+   "theft_2024": 275,
+   "cctv_points": 1908
+  },
+  {
+   "region": "경남 사천시",
+   "sido": "경남",
+   "sigungu": "사천시",
+   "lat": 35.00218,
+   "lng": 128.07658,
+   "theft_2024": 267,
+   "cctv_points": 2878
+  },
+  {
+   "region": "강원 속초시",
+   "sido": "강원도",
+   "sigungu": "속초시",
+   "lat": 38.19868,
+   "lng": 128.5847,
+   "theft_2024": 264,
+   "cctv_points": 442
+  },
+  {
+   "region": "충북 진천군",
+   "sido": "충북",
+   "sigungu": "진천군",
+   "lat": 36.87618,
+   "lng": 127.44645,
+   "theft_2024": 250,
+   "cctv_points": 1011
+  },
+  {
+   "region": "경남 밀양시",
+   "sido": "경남",
+   "sigungu": "밀양시",
+   "lat": 35.4867,
+   "lng": 128.7524,
+   "theft_2024": 246,
+   "cctv_points": 3149
+  },
+  {
+   "region": "충남 공주시",
+   "sido": "충남",
+   "sigungu": "공주시",
+   "lat": 36.0,
+   "lng": 127.0,
+   "theft_2024": 244,
+   "cctv_points": 2727
+  },
+  {
+   "region": "전북 남원시",
+   "sido": "전북",
+   "sigungu": "남원시",
+   "lat": 35.41236,
+   "lng": 127.38415,
+   "theft_2024": 241,
+   "cctv_points": 1991
+  },
+  {
+   "region": "경기 의왕시",
+   "sido": "경기도",
+   "sigungu": "의왕시",
+   "lat": 37.35897,
+   "lng": 126.97537,
+   "theft_2024": 237,
+   "cctv_points": 805
+  },
+  {
+   "region": "전남 무안군",
+   "sido": "전남",
+   "sigungu": "무안군",
+   "lat": 34.92802,
+   "lng": 126.46043,
+   "theft_2024": 236,
+   "cctv_points": 566
+  },
+  {
+   "region": "경북 문경시",
+   "sido": "경북",
+   "sigungu": "문경시",
+   "lat": 36.6009,
+   "lng": 128.1938,
+   "theft_2024": 235,
+   "cctv_points": 2331
+  },
+  {
+   "region": "전북 완주군",
+   "sido": "전북",
+   "sigungu": "완주군",
+   "lat": 35.90769,
+   "lng": 127.12383,
+   "theft_2024": 224,
+   "cctv_points": 593
+  },
+  {
+   "region": "강원 정선군",
+   "sido": "강원도",
+   "sigungu": "정선군",
+   "lat": 37.35813,
+   "lng": 128.73952,
+   "theft_2024": 208,
+   "cctv_points": 630
+  },
+  {
+   "region": "충남 홍성군",
+   "sido": "충남",
+   "sigungu": "홍성군",
+   "lat": 36.59952,
+   "lng": 126.66534,
+   "theft_2024": 202,
+   "cctv_points": 1287
+  },
+  {
+   "region": "경북 영주시",
+   "sido": "경북",
+   "sigungu": "영주시",
+   "lat": 36.82355,
+   "lng": 128.619,
+   "theft_2024": 199,
+   "cctv_points": 1548
+  },
+  {
+   "region": "강원 동해시",
+   "sido": "강원도",
+   "sigungu": "동해시",
+   "lat": 37.52494,
+   "lng": 129.10877,
+   "theft_2024": 188,
+   "cctv_points": 1650
+  },
+  {
+   "region": "충남 예산군",
+   "sido": "충남",
+   "sigungu": "예산군",
+   "lat": 36.68643,
+   "lng": 126.80859,
+   "theft_2024": 183,
+   "cctv_points": 481
+  },
+  {
+   "region": "강원 홍천군",
+   "sido": "강원도",
+   "sigungu": "홍천군",
+   "lat": 37.69342,
+   "lng": 127.89088,
+   "theft_2024": 177,
+   "cctv_points": 459
+  },
+  {
+   "region": "경북 청도군",
+   "sido": "경북",
+   "sigungu": "청도군",
+   "lat": 35.6502,
+   "lng": 128.74144,
+   "theft_2024": 171,
+   "cctv_points": 562
+  },
+  {
+   "region": "인천 강화군",
+   "sido": "인천",
+   "sigungu": "강화군",
+   "lat": 37.73966,
+   "lng": 126.47995,
+   "theft_2024": 168,
+   "cctv_points": 1078
+  },
+  {
+   "region": "강원 삼척시",
+   "sido": "강원도",
+   "sigungu": "삼척시",
+   "lat": 37.4289,
+   "lng": 129.16799,
+   "theft_2024": 167,
+   "cctv_points": 480
+  },
+  {
+   "region": "전북 김제시",
+   "sido": "전북",
+   "sigungu": "김제시",
+   "lat": 35.80141,
+   "lng": 126.89941,
+   "theft_2024": 162,
+   "cctv_points": 900
+  },
+  {
+   "region": "전남 완도군",
+   "sido": "전남",
+   "sigungu": "완도군",
+   "lat": 34.31756,
+   "lng": 126.74632,
+   "theft_2024": 162,
+   "cctv_points": 334
+  },
+  {
+   "region": "경북 의성군",
+   "sido": "경북",
+   "sigungu": "의성군",
+   "lat": 36.35289,
+   "lng": 128.64316,
+   "theft_2024": 161,
+   "cctv_points": 944
+  },
+  {
+   "region": "전남 해남군",
+   "sido": "전남",
+   "sigungu": "해남군",
+   "lat": 34.57104,
+   "lng": 126.59384,
+   "theft_2024": 158,
+   "cctv_points": 572
+  },
+  {
+   "region": "경남 창녕군",
+   "sido": "경남",
+   "sigungu": "창녕군",
+   "lat": 35.53143,
+   "lng": 128.49488,
+   "theft_2024": 155,
+   "cctv_points": 1971
+  },
+  {
+   "region": "충남 부여군",
+   "sido": "충남",
+   "sigungu": "부여군",
+   "lat": 36.27594,
+   "lng": 126.90315,
+   "theft_2024": 149,
+   "cctv_points": 1677
+  },
+  {
+   "region": "전남 고흥군",
+   "sido": "전남",
+   "sigungu": "고흥군",
+   "lat": 34.60411,
+   "lng": 127.29859,
+   "theft_2024": 146,
+   "cctv_points": 670
+  },
+  {
+   "region": "경북 성주군",
+   "sido": "경북",
+   "sigungu": "성주군",
+   "lat": 35.91799,
+   "lng": 128.27083,
+   "theft_2024": 146,
+   "cctv_points": 808
+  },
+  {
+   "region": "전남 장성군",
+   "sido": "전남",
+   "sigungu": "장성군",
+   "lat": 35.29767,
+   "lng": 126.78288,
+   "theft_2024": 142,
+   "cctv_points": 676
+  },
+  {
+   "region": "전남 화순군",
+   "sido": "전남",
+   "sigungu": "화순군",
+   "lat": 35.05186,
+   "lng": 126.98588,
+   "theft_2024": 141,
+   "cctv_points": 2010
+  },
+  {
+   "region": "경기 가평군",
+   "sido": "경기도",
+   "sigungu": "가평군",
+   "lat": 37.81007,
+   "lng": 127.48169,
+   "theft_2024": 139,
+   "cctv_points": 725
+  },
+  {
+   "region": "전남 영암군",
+   "sido": "전남",
+   "sigungu": "영암군",
+   "lat": 34.761,
+   "lng": 126.58283,
+   "theft_2024": 135,
+   "cctv_points": 762
+  },
+  {
+   "region": "전남 영광군",
+   "sido": "전남",
+   "sigungu": "영광군",
+   "lat": 35.2677,
+   "lng": 126.5516,
+   "theft_2024": 135,
+   "cctv_points": 581
+  },
+  {
+   "region": "경기 연천군",
+   "sido": "경기도",
+   "sigungu": "연천군",
+   "lat": 38.03216,
+   "lng": 127.06865,
+   "theft_2024": 131,
+   "cctv_points": 595
+  },
+  {
+   "region": "경남 거창군",
+   "sido": "경남",
+   "sigungu": "거창군",
+   "lat": 35.68989,
+   "lng": 127.9128,
+   "theft_2024": 128,
+   "cctv_points": 1812
+  },
+  {
+   "region": "경남 고성군",
+   "sido": "경남",
+   "sigungu": "고성군",
+   "lat": 34.97774,
+   "lng": 128.32305,
+   "theft_2024": 126,
+   "cctv_points": 1448
+  },
+  {
+   "region": "충남 태안군",
+   "sido": "충남",
+   "sigungu": "태안군",
+   "lat": 36.75169,
+   "lng": 126.29883,
+   "theft_2024": 122,
+   "cctv_points": 1547
+  },
+  {
+   "region": "강원 태백시",
+   "sido": "강원도",
+   "sigungu": "태백시",
+   "lat": 37.1634,
+   "lng": 128.99068,
+   "theft_2024": 120,
+   "cctv_points": 15687
+  },
+  {
+   "region": "전남 보성군",
+   "sido": "전남",
+   "sigungu": "보성군",
+   "lat": 34.78652,
+   "lng": 127.12812,
+   "theft_2024": 115,
+   "cctv_points": 1690
+  },
+  {
+   "region": "경북 예천군",
+   "sido": "경북",
+   "sigungu": "예천군",
+   "lat": 36.6392,
+   "lng": 128.42874,
+   "theft_2024": 115,
+   "cctv_points": 1031
+  },
+  {
+   "region": "전남 함평군",
+   "sido": "전남",
+   "sigungu": "함평군",
+   "lat": 35.08157,
+   "lng": 126.53473,
+   "theft_2024": 111,
+   "cctv_points": 756
+  },
+  {
+   "region": "경북 영덕군",
+   "sido": "경북",
+   "sigungu": "영덕군",
+   "lat": 36.42097,
+   "lng": 129.37892,
+   "theft_2024": 111,
+   "cctv_points": 630
+  },
+  {
+   "region": "경북 울진군",
+   "sido": "경북",
+   "sigungu": "울진군",
+   "lat": 36.98624,
+   "lng": 129.40447,
+   "theft_2024": 111,
+   "cctv_points": 789
+  },
+  {
+   "region": "전남 담양군",
+   "sido": "전남",
+   "sigungu": "담양군",
+   "lat": 35.3002,
+   "lng": 126.98234,
+   "theft_2024": 110,
+   "cctv_points": 423
+  },
+  {
+   "region": "전남 진도군",
+   "sido": "전남",
+   "sigungu": "진도군",
+   "lat": 34.47636,
+   "lng": 126.26366,
+   "theft_2024": 110,
+   "cctv_points": 1559
+  },
+  {
+   "region": "강원 횡성군",
+   "sido": "강원도",
+   "sigungu": "횡성군",
+   "lat": 37.49073,
+   "lng": 127.988,
+   "theft_2024": 102,
+   "cctv_points": 777
+  },
+  {
+   "region": "전북 부안군",
+   "sido": "전북",
+   "sigungu": "부안군",
+   "lat": 35.72056,
+   "lng": 126.73053,
+   "theft_2024": 101,
+   "cctv_points": 525
+  },
+  {
+   "region": "충북 옥천군",
+   "sido": "충북",
+   "sigungu": "옥천군",
+   "lat": 36.30241,
+   "lng": 127.5807,
+   "theft_2024": 100,
+   "cctv_points": 406
+  },
+  {
+   "region": "경남 합천군",
+   "sido": "경남",
+   "sigungu": "합천군",
+   "lat": 35.56634,
+   "lng": 128.16184,
+   "theft_2024": 99,
+   "cctv_points": 789
+  },
+  {
+   "region": "충남 금산군",
+   "sido": "충남",
+   "sigungu": "금산군",
+   "lat": 36.111,
+   "lng": 127.4902,
+   "theft_2024": 95,
+   "cctv_points": 1704
+  },
+  {
+   "region": "경남 하동군",
+   "sido": "경남",
+   "sigungu": "하동군",
+   "lat": 35.07092,
+   "lng": 127.78529,
+   "theft_2024": 95,
+   "cctv_points": 2201
+  },
+  {
+   "region": "대구 군위군",
+   "sido": "대구",
+   "sigungu": "군위군",
+   "lat": 36.1876,
+   "lng": 128.58263,
+   "theft_2024": 93,
+   "cctv_points": 665
+  },
+  {
+   "region": "경남 함안군",
+   "sido": "경남",
+   "sigungu": "함안군",
+   "lat": 35.28055,
+   "lng": 128.42141,
+   "theft_2024": 89,
+   "cctv_points": 1691
+  },
+  {
+   "region": "전남 장흥군",
+   "sido": "전남",
+   "sigungu": "장흥군",
+   "lat": 34.67762,
+   "lng": 126.91099,
+   "theft_2024": 88,
+   "cctv_points": 1143
+  },
+  {
+   "region": "전남 신안군",
+   "sido": "전남",
+   "sigungu": "신안군",
+   "lat": 34.82668,
+   "lng": 126.10956,
+   "theft_2024": 87,
+   "cctv_points": 232
+  },
+  {
+   "region": "강원 철원군",
+   "sido": "강원도",
+   "sigungu": "철원군",
+   "lat": 38.20905,
+   "lng": 127.3079,
+   "theft_2024": 83,
+   "cctv_points": 767
+  },
+  {
+   "region": "강원 고성군",
+   "sido": "강원도",
+   "sigungu": "고성군",
+   "lat": 38.37832,
+   "lng": 128.47079,
+   "theft_2024": 83,
+   "cctv_points": 540
+  },
+  {
+   "region": "강원 평창군",
+   "sido": "강원도",
+   "sigungu": "평창군",
+   "lat": 37.52105,
+   "lng": 128.42135,
+   "theft_2024": 82,
+   "cctv_points": 190
+  },
+  {
+   "region": "충남 서천군",
+   "sido": "충남",
+   "sigungu": "서천군",
+   "lat": 36.07994,
+   "lng": 126.69098,
+   "theft_2024": 82,
+   "cctv_points": 1515
+  },
+  {
+   "region": "전남 강진군",
+   "sido": "전남",
+   "sigungu": "강진군",
+   "lat": 34.63905,
+   "lng": 126.77059,
+   "theft_2024": 80,
+   "cctv_points": 380
+  },
+  {
+   "region": "경북 고령군",
+   "sido": "경북",
+   "sigungu": "고령군",
+   "lat": 35.729,
+   "lng": 128.282,
+   "theft_2024": 79,
+   "cctv_points": 1217
+  },
+  {
+   "region": "전북 고창군",
+   "sido": "전북",
+   "sigungu": "고창군",
+   "lat": 35.4361,
+   "lng": 126.69013,
+   "theft_2024": 77,
+   "cctv_points": 409
+  },
+  {
+   "region": "강원 양양군",
+   "sido": "강원도",
+   "sigungu": "양양군",
+   "lat": 38.07355,
+   "lng": 128.62505,
+   "theft_2024": 76,
+   "cctv_points": 338
+  },
+  {
+   "region": "충북 보은군",
+   "sido": "충북",
+   "sigungu": "보은군",
+   "lat": 36.48356,
+   "lng": 127.72154,
+   "theft_2024": 75,
+   "cctv_points": 323
+  },
+  {
+   "region": "충북 증평군",
+   "sido": "충북",
+   "sigungu": "증평군",
+   "lat": 36.78438,
+   "lng": 127.58537,
+   "theft_2024": 75,
+   "cctv_points": 999
+  },
+  {
+   "region": "전남 구례군",
+   "sido": "전남",
+   "sigungu": "구례군",
+   "lat": 35.2118,
+   "lng": 127.46604,
+   "theft_2024": 73,
+   "cctv_points": 435
+  },
+  {
+   "region": "강원 영월군",
+   "sido": "강원도",
+   "sigungu": "영월군",
+   "lat": 37.18434,
+   "lng": 128.4657,
+   "theft_2024": 68,
+   "cctv_points": 934
+  },
+  {
+   "region": "충남 청양군",
+   "sido": "충남",
+   "sigungu": "청양군",
+   "lat": 36.44417,
+   "lng": 126.80756,
+   "theft_2024": 66,
+   "cctv_points": 521
+  },
+  {
+   "region": "경남 남해군",
+   "sido": "경남",
+   "sigungu": "남해군",
+   "lat": 34.83455,
+   "lng": 127.90172,
+   "theft_2024": 65,
+   "cctv_points": 1262
+  },
+  {
+   "region": "경남 함양군",
+   "sido": "경남",
+   "sigungu": "함양군",
+   "lat": 35.5243,
+   "lng": 127.729,
+   "theft_2024": 63,
+   "cctv_points": 1192
+  },
+  {
+   "region": "강원 양구군",
+   "sido": "강원도",
+   "sigungu": "양구군",
+   "lat": 38.10655,
+   "lng": 127.98959,
+   "theft_2024": 59,
+   "cctv_points": 410
+  },
+  {
+   "region": "경북 청송군",
+   "sido": "경북",
+   "sigungu": "청송군",
+   "lat": 36.36599,
+   "lng": 129.05058,
+   "theft_2024": 59,
+   "cctv_points": 413
+  },
+  {
+   "region": "경북 봉화군",
+   "sido": "경북",
+   "sigungu": "봉화군",
+   "lat": 36.89119,
+   "lng": 128.77025,
+   "theft_2024": 59,
+   "cctv_points": 963
+  },
+  {
+   "region": "전남 곡성군",
+   "sido": "전남",
+   "sigungu": "곡성군",
+   "lat": 35.2667,
+   "lng": 127.2524,
+   "theft_2024": 56,
+   "cctv_points": 1417
+  },
+  {
+   "region": "충북 영동군",
+   "sido": "충북",
+   "sigungu": "영동군",
+   "lat": 36.17538,
+   "lng": 127.81399,
+   "theft_2024": 52,
+   "cctv_points": 1406
+  },
+  {
+   "region": "전북 임실군",
+   "sido": "전북",
+   "sigungu": "임실군",
+   "lat": 35.61057,
+   "lng": 127.2747,
+   "theft_2024": 51,
+   "cctv_points": 850
+  },
+  {
+   "region": "강원 인제군",
+   "sido": "강원도",
+   "sigungu": "인제군",
+   "lat": 38.063,
+   "lng": 128.204,
+   "theft_2024": 47,
+   "cctv_points": 675
+  },
+  {
+   "region": "전북 진안군",
+   "sido": "전북",
+   "sigungu": "진안군",
+   "lat": 35.79438,
+   "lng": 127.42571,
+   "theft_2024": 47,
+   "cctv_points": 1310
+  },
+  {
+   "region": "충남 계룡시",
+   "sido": "충남",
+   "sigungu": "계룡시",
+   "lat": 36.2809,
+   "lng": 127.2467,
+   "theft_2024": 45,
+   "cctv_points": 101
+  },
+  {
+   "region": "경남 산청군",
+   "sido": "경남",
+   "sigungu": "산청군",
+   "lat": 35.37808,
+   "lng": 127.88825,
+   "theft_2024": 45,
+   "cctv_points": 952
+  },
+  {
+   "region": "강원 화천군",
+   "sido": "강원도",
+   "sigungu": "화천군",
+   "lat": 38.10557,
+   "lng": 127.70237,
+   "theft_2024": 42,
+   "cctv_points": 239
+  },
+  {
+   "region": "충북 괴산군",
+   "sido": "충북",
+   "sigungu": "괴산군",
+   "lat": 36.80694,
+   "lng": 127.79428,
+   "theft_2024": 42,
+   "cctv_points": 847
+  },
+  {
+   "region": "전북 장수군",
+   "sido": "전북",
+   "sigungu": "장수군",
+   "lat": 35.65638,
+   "lng": 127.53444,
+   "theft_2024": 42,
+   "cctv_points": 660
+  },
+  {
+   "region": "경북 영양군",
+   "sido": "경북",
+   "sigungu": "영양군",
+   "lat": 36.66335,
+   "lng": 129.11553,
+   "theft_2024": 40,
+   "cctv_points": 478
+  },
+  {
+   "region": "경남 의령군",
+   "sido": "경남",
+   "sigungu": "의령군",
+   "lat": 35.34057,
+   "lng": 128.26647,
+   "theft_2024": 40,
+   "cctv_points": 328
+  },
+  {
+   "region": "전북 순창군",
+   "sido": "전북",
+   "sigungu": "순창군",
+   "lat": 35.37543,
+   "lng": 127.14264,
+   "theft_2024": 39,
+   "cctv_points": 175
+  },
+  {
+   "region": "충북 단양군",
+   "sido": "충북",
+   "sigungu": "단양군",
+   "lat": 36.98693,
+   "lng": 128.3559,
+   "theft_2024": 38,
+   "cctv_points": 796
+  },
+  {
+   "region": "전북 무주군",
+   "sido": "전북",
+   "sigungu": "무주군",
+   "lat": 35.97067,
+   "lng": 127.66779,
+   "theft_2024": 30,
+   "cctv_points": 858
+  },
+  {
+   "region": "인천 옹진군",
+   "sido": "인천",
+   "sigungu": "옹진군",
+   "lat": 37.52164,
+   "lng": 126.17058,
+   "theft_2024": 15,
+   "cctv_points": 130
+  },
+  {
+   "region": "경북 울릉군",
+   "sido": "경북",
+   "sigungu": "울릉군",
+   "lat": 37.48796,
+   "lng": 130.87167,
+   "theft_2024": 5,
+   "cctv_points": 296
+  }
+ ]
+}

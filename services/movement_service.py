@@ -1,42 +1,52 @@
 """
-도난 이동패턴 예측
+모니터링 우선 지역 산출 (도난 이동패턴)
 
-기존 구현은 지역과 무관하게 동일한 값을 반환하는 데모였다.
-이 모듈은 아래 세 가지 관측 가능한 근거만으로 우선 수색 지역을 산출한다.
+도난 지점과 경과 시간으로 "중고마켓 감시 엔진이 먼저 볼 지역"의 우선순위를 낸다.
+학습 모델이 아니라 규칙 기반 산출이며, 응답에 근거 데이터와 계산식을 함께 싣는다.
 
-  1) 거리 감쇠      - 도난 지점에서 멀수록 출현 확률 하락
-  2) 중고 거래 밀도 - 중고 매물이 실제로 모이는 거점까지의 접근성
-  3) 시간 경과      - 경과 시간이 길수록 탐색 반경 확대
+2026-10-01 데이터 근거화 (P4)
+  이전: 중고거래 거점 14곳과 가중치(0.65~1.00)를 손으로 정했다.
+  지금: 후보 지역·가중치·좌표를 모두 공개 데이터에서 산출한다.
+    - 후보 지역 : 경찰청 범죄 통계의 시군구 227곳
+    - 가중치    : 2024년 시군구별 절도범죄 발생 건수 (경찰청, 공공데이터포털 3074462)
+    - 좌표      : 「전국 CCTV 표준데이터」 좌표의 시군구별 중앙값
+  빌드: scripts/build_region_weights.py → data_src/region_weights.json
 
-학습 모델이 아니라 규칙 기반 추정이며, 반환값에 근거를 함께 실어
-어떤 계산으로 나온 수치인지 확인할 수 있게 한다.
+남아 있는 가정값 (데이터 근거 없음, 응답의 assumptions 에 그대로 노출)
+  - 하루 이동 반경 12km, 상한 60km
 """
+import json
 import math
-from .clock import datetime
+import os
 from typing import Optional
 
-# 중고거래 거점: 실제 중고 매물 밀집도가 높은 지역
-# (당근·번개장터 지역 검색 시 매물 수 기준으로 선정한 고정 좌표)
-HUBS = [
-    {"name": "서울 중랑 중고시장", "lat": 37.6065, "lng": 127.0927, "weight": 1.00},
-    {"name": "서울 용산 전자상가", "lat": 37.5299, "lng": 126.9648, "weight": 0.85},
-    {"name": "성남 모란시장", "lat": 37.4322, "lng": 127.1290, "weight": 0.95},
-    {"name": "수원 영통", "lat": 37.2595, "lng": 127.0466, "weight": 0.80},
-    {"name": "인천 부평", "lat": 37.4894, "lng": 126.7247, "weight": 0.80},
-    {"name": "고양 화정", "lat": 37.6345, "lng": 126.8324, "weight": 0.75},
-    {"name": "부산 서면", "lat": 35.1578, "lng": 129.0596, "weight": 0.90},
-    {"name": "부산 구포시장", "lat": 35.2103, "lng": 128.9954, "weight": 0.75},
-    {"name": "창원 상남시장", "lat": 35.2280, "lng": 128.6811, "weight": 0.70},
-    {"name": "김해 내동", "lat": 35.2285, "lng": 128.8894, "weight": 0.65},
-    {"name": "대구 칠성시장", "lat": 35.8797, "lng": 128.5990, "weight": 0.85},
-    {"name": "대전 중앙시장", "lat": 36.3286, "lng": 127.4290, "weight": 0.80},
-    {"name": "광주 말바우시장", "lat": 35.1730, "lng": 126.9200, "weight": 0.75},
-    {"name": "울산 남구", "lat": 35.5384, "lng": 129.3114, "weight": 0.65},
-]
+from .clock import datetime
 
-# 도난 자전거가 하루에 이동하는 통상 반경 (km)
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_DATA = os.path.join(_ROOT, "data_src", "region_weights.json")
+
+with open(_DATA, encoding="utf-8") as _f:
+    _BUNDLE = json.load(_f)
+
+META = _BUNDLE["meta"]
+REGIONS = [r for r in _BUNDLE["regions"] if r["theft_2024"] > 0]
+_MAX_THEFT = max(r["theft_2024"] for r in REGIONS)
+
+# 가정값: 도난 자전거가 하루에 이동하는 통상 반경 (km)
 DAILY_RADIUS_KM = 12.0
 MAX_RADIUS_KM = 60.0
+MIN_CANDIDATES = 3
+
+FORMULA = ("score = exp(-max(d - 0.3R, 0) / R) x w,  "
+           "w = 시군구 절도 발생 건수 / 전국 최다 시군구 건수 (2024, 경찰청),  "
+           "R = 12km/일 x 경과일수 (상한 60km)")
+
+DATA_SOURCES = [
+    {"use": "가중치", "name": META["weight_source"], "url": META["weight_source_url"],
+     "note": META["weight_note"]},
+    {"use": "지역 좌표", "name": META["coord_source"],
+     "url": "https://www.data.go.kr/data/15013094/standard.do"},
+]
 
 
 def _dist_km(lat1, lng1, lat2, lng2):
@@ -51,43 +61,37 @@ def _dist_km(lat1, lng1, lat2, lng2):
 def predict(lat: float, lng: float, hours_elapsed: float = 24.0,
             top_n: int = 5) -> dict:
     """
-    도난 지점 좌표와 경과 시간으로 우선 수색 지역을 산출한다.
+    도난 지점 좌표와 경과 시간으로 모니터링 우선 지역을 산출한다.
 
     반환 확률은 상대 순위를 나타내는 지표이며 실제 발생 확률이 아니다.
     """
     days = max(hours_elapsed / 24.0, 0.25)
-    # 경과 시간에 따른 탐색 반경 (하루 12km, 최대 60km)
     search_radius = min(DAILY_RADIUS_KM * days, MAX_RADIUS_KM)
 
-    scored = []
-    for h in HUBS:
-        d = _dist_km(lat, lng, h["lat"], h["lng"])
-        if d > search_radius * 2.5:
-            continue
-        # 거리 감쇠: 탐색 반경에서 1.0, 멀어질수록 지수적으로 감소
-        decay = math.exp(-max(d - search_radius * 0.3, 0) / max(search_radius, 1.0))
-        score = decay * h["weight"]
-        scored.append({
-            "area": h["name"],
-            "lat": h["lat"],
-            "lng": h["lng"],
-            "distance_km": round(d, 1),
-            "_score": score,
-        })
+    dists = [(_dist_km(lat, lng, r["lat"], r["lng"]), r) for r in REGIONS]
+    dists.sort(key=lambda x: x[0])
+    cand = [x for x in dists if x[0] <= search_radius * 2.5]
+    if len(cand) < MIN_CANDIDATES:
+        # 시군구 중심이 멀리 떨어진 지역(도서·산간)에서도 결과가 비지 않게 가장 가까운 곳을 보탠다
+        cand = dists[:max(MIN_CANDIDATES, len(cand))]
 
-    if not scored:
-        return {
-            "predictions": [],
-            "search_radius_km": round(search_radius, 1),
-            "hours_elapsed": hours_elapsed,
-            "method": "distance_decay_x_hub_density",
-            "note": "탐색 반경 내 중고거래 거점이 없습니다. 반경을 넓히거나 인접 지역을 직접 지정하십시오.",
-        }
+    scored = []
+    for d, r in cand:
+        decay = math.exp(-max(d - search_radius * 0.3, 0) / max(search_radius, 1.0))
+        w = r["theft_2024"] / _MAX_THEFT
+        scored.append({
+            "area": r["region"],
+            "lat": r["lat"],
+            "lng": r["lng"],
+            "distance_km": round(d, 1),
+            "theft_2024": r["theft_2024"],
+            "weight": round(w, 4),
+            "decay": round(decay, 4),
+            "_score": decay * w,
+        })
 
     scored.sort(key=lambda s: s["_score"], reverse=True)
     top = scored[:top_n]
-
-    # 반환 대상(top_n) 기준으로 정규화해야 합이 100%가 된다.
     total = sum(s["_score"] for s in top) or 1.0
 
     out = []
@@ -98,26 +102,35 @@ def predict(lat: float, lng: float, hours_elapsed: float = 24.0,
             "lng": s["lng"],
             "distance_km": s["distance_km"],
             "probability": round(s["_score"] / total * 100),
-            "basis": f"거리 {s['distance_km']}km · 탐색반경 {round(search_radius,1)}km 내 상대 순위",
+            "theft_2024": s["theft_2024"],
+            "weight": s["weight"],
+            "basis": f"2024년 절도 {s['theft_2024']:,}건(경찰청) · 거리 {s['distance_km']}km",
         })
 
-    # 반올림 오차를 1순위에 흡수시켜 합계를 100%로 맞춘다.
     if out:
         gap = 100 - sum(o["probability"] for o in out)
         out[0]["probability"] += gap
+    # 반올림해 0%가 된 지역(예: 제주에서 바다 건너 내륙)은 감시 대상에서 뚜다
+    out = [o for o in out if o["probability"] > 0]
 
     return {
         "predictions": out,
         "search_radius_km": round(search_radius, 1),
         "hours_elapsed": hours_elapsed,
-        "method": "distance_decay_x_hub_density",
-        "formula": "score = exp(-max(d - 0.3R, 0) / R) x hub_weight,  R = 12km/일 x 경과일수 (상한 60km)",
+        "method": "distance_decay_x_regional_theft_2024",
+        "formula": FORMULA,
+        "candidates": {"regions_total": len(REGIONS), "regions_in_range": len(cand)},
+        "data_sources": DATA_SOURCES,
+        "assumptions": [
+            "하루 이동 반경 12km·상한 60km는 설정값 (관측 데이터 없음)",
+            "자전거 절도 시군구 통계 미공개로 절도범죄 전체 건수를 대리 지표로 사용",
+        ],
         "disclaimer": "상대 순위 지표이며 통계적 발생 확률이 아님. 중고 매물 모니터링 대상 지역 선정에 사용.",
         "generated_at": datetime.now().isoformat(timespec="seconds"),
     }
 
 
 def monitoring_regions(lat: float, lng: float, hours_elapsed: float = 24.0) -> list:
-    """중고마켓 크롤링 시 우선 감시할 지역명 목록."""
+    """중고마켓 감시 엔진에 넘길 우선 감시 지역명 목록."""
     r = predict(lat, lng, hours_elapsed, top_n=5)
     return [p["area"] for p in r["predictions"]]

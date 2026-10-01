@@ -355,6 +355,71 @@ def t6_cctv_expand():
           g.get("note", ""))
 
 
+def _police_theft_raw():
+    """서비스 코드가 아니라 경찰청 원본 CSV를 직접 읽어 정답을 만든다 (채점표 격리)."""
+    import csv
+    import io
+    import os
+    p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                     "data_src", "police_crime_region_2024.csv")
+    rows = list(csv.reader(io.StringIO(open(p, "rb").read().decode("cp949"))))
+    head = rows[0]
+    row = next(r for r in rows if len(r) > 1 and r[1].strip() == "절도범죄")
+    out = {}
+    for label, v in zip(head[2:], row[2:]):
+        if label.startswith("외국"):
+            continue
+        out[label.replace("경기도 ", "경기 ").replace("강원도 ", "강원 ")] = int(v or 0)
+    return out
+
+
+def t7_movement_data():
+    print("\n[7] 모니터링 우선 지역 — 공개 데이터 근거화 (손으로 정한 거점·가중치 제거)")
+    raw = _police_theft_raw()
+    mx = max(raw.values())
+    outs = {n: post("/api/predict-movement", {"lat": la, "lng": lo, "hours_elapsed": 24}) for n, la, lo in SPOTS}
+    preds = [p for d in outs.values() for p in d.get("predictions", [])]
+
+    # 7-1. 가중치 출처가 응답에 있음
+    src = json.dumps(outs["서울 강남역"].get("data_sources", []), ensure_ascii=False)
+    check("가중치 출처(경찰청 2024 지역별 통계) 응답에 명시",
+          "경찰청" in src and "3074462" in src and "CCTV" in src, src[:120])
+
+    # 7-2. 반환된 지역별 절도 건수가 경찰청 원본과 전부 일치
+    mism = [f"{p['area']}:{p.get('theft_2024')}≠{raw.get(p['area'])}" for p in preds
+            if raw.get(p["area"]) != p.get("theft_2024")]
+    check("지역별 절도 건수 = 경찰청 원본 CSV (전 지역 대조)", len(preds) >= 15 and not mism,
+          f"대조 {len(preds)}건, 불일치 {len(mism)}건 {mism[:3]}")
+
+    # 7-3. 가중치 = 건수 / 전국 최다 (손으로 정한 값이 아님)
+    bad = [p["area"] for p in preds if abs(p.get("weight", -1) - p.get("theft_2024", 0) / mx) > 1e-3]
+    check("가중치 = 절도 건수 ÷ 전국 최다 시군구 (역산 일치)", not bad,
+          f"전국 최다 {mx:,}건 기준, 불일치 {bad[:3]}")
+
+    # 7-4. 이전 수기 거점 이름이 더 이상 나오지 않음
+    old = {"서울 중랑 중고시장", "서울 용산 전자상가", "성남 모란시장", "수원 영통", "인천 부평", "고양 화정",
+           "부산 구포시장", "창원 상남시장", "김해 내동", "대구 칠성시장", "대전 중앙시장", "광주 말바우시장"}
+    hit = sorted({p["area"] for p in preds} & old)
+    check("손으로 정한 거점 14곳 미사용", not hit, str(hit) if hit else "없음")
+
+    # 7-5. 후보가 시군구 전체 (14곳 고정 목록이 아님)
+    cands = outs["서울 강남역"].get("candidates", {})
+    check("후보 지역 = 전국 시군구 200곳 이상", cands.get("regions_total", 0) >= 200, str(cands))
+
+    # 7-6. 도난 직후(2시간)에는 1순위가 도난 지점과 같은 시도
+    sido = {"서울 강남역": "서울", "부산 서면": "부산", "김해시청": "경남", "대구 칠성시장": "대구", "제주시청": "제주"}
+    tops = {}
+    for n, la, lo in SPOTS:
+        d = post("/api/predict-movement", {"lat": la, "lng": lo, "hours_elapsed": 2})
+        tops[n] = (d.get("predictions") or [{}])[0].get("area", "")
+    wrong = {n: a for n, a in tops.items() if not a.startswith(sido[n])}
+    check("도난 2시간 후 1순위 = 도난 지점 시도 (5곳)", not wrong, " / ".join(f"{n}→{a}" for n, a in tops.items()))
+
+    # 7-7. 남은 가정값을 숨기지 않음
+    asm = outs["서울 강남역"].get("assumptions", [])
+    check("근거 없는 가정값(이동 반경 12km/일) 응답에 명시", any("12km" in a for a in asm), "; ".join(asm))
+
+
 def main():
     print(f"대상: {BASE}")
     print(f"시각: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -372,6 +437,7 @@ def main():
     t4_tracking_lifecycle()
     t5_report_pdf()
     t6_cctv_expand()
+    t7_movement_data()
 
     total = len(PASS) + len(FAIL)
     print(f"\n{'=' * 52}")

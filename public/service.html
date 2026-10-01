@@ -198,7 +198,7 @@ body{background:#060810;font-family:-apple-system,'Apple SD Gothic Neo','Pretend
       <!-- 15 모니터링 지역 -->
       <div class="slide" id="s2"><div class="statusbar"><span>9:41</span><span>LTE</span></div><div class="content">
         <div class="header"><span class="header-title">모니터링 우선 지역</span><span class="badge b-indigo">중고마켓 감시</span></div>
-        <div class="card card-indigo"><div class="sub" style="margin:0;color:#A5B4FC">도난 지점과 경과 시간으로 중고마켓 감시 엔진의 탐색 지역 우선순위를 정합니다. 탐색 반경 <b id="mv-radius">-</b></div></div>
+        <div class="card card-indigo"><div class="sub" style="margin:0;color:#A5B4FC">도난 지점·경과 시간과 <b>시군구별 절도 발생 통계(경찰청 2024)</b>로 중고마켓 감시 엔진의 탐색 지역 우선순위를 정합니다. 탐색 반경 <b id="mv-radius">-</b></div></div>
         <div class="card card-dark" id="mv-list"></div>
         <div class="note" id="mv-formula"></div>
         <button class="btn btn-primary" data-next="3">112 신고서 만들기</button>
@@ -409,8 +409,9 @@ async function loadMovement(){
   try{
     const d = await api('/api/predict-movement',{method:'POST', body:JSON.stringify({lat:S.lat,lng:S.lng,hours_elapsed:Math.min(hours,24*5)})});
     $('mv-radius').textContent = d.search_radius_km+'km';
-    $('mv-list').innerHTML = (d.predictions||[]).map((p,k)=>`<div style="margin-bottom:9px"><div class="between"><span class="li-main" style="font-size:12px">${k+1}. ${esc(p.area)}</span><span class="value">${p.probability}%</span></div><div class="li-sub">도난 지점에서 ${p.distance_km}km</div><div class="bar-track"><div class="bar" style="width:${p.probability}%"></div></div></div>`).join('') || `<div class="sub">${esc(d.note||'탐색 반경 내 거점 없음')}</div>`;
-    $('mv-formula').textContent = (d.disclaimer||'') + ' 산출식: ' + (d.formula||'');
+    $('mv-list').innerHTML = (d.predictions||[]).map((p,k)=>`<div style="margin-bottom:9px"><div class="between"><span class="li-main" style="font-size:12px">${k+1}. ${esc(p.area)}</span><span class="value">${p.probability}%</span></div><div class="li-sub">도난 지점에서 ${p.distance_km}km · 2024 절도 ${(p.theft_2024||0).toLocaleString()}건</div><div class="bar-track"><div class="bar" style="width:${p.probability}%"></div></div></div>`).join('') || `<div class="sub">${esc(d.note||'탐색 반경 내 거점 없음')}</div>`;
+    const srcs = (d.data_sources||[]).map(x=>`${x.use}: ${x.name}`).join(' · ');
+    $('mv-formula').textContent = (d.disclaimer||'') + ' 산출식: ' + (d.formula||'') + (srcs ? ' · 근거 데이터 ' + srcs : '');
   }catch(e){ toast('지역 산출 실패: '+e.message); }
 }
 

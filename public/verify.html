@@ -86,7 +86,7 @@
 
   <div class="muted" style="margin-top:24px">
     데이터 출처: 공공데이터포털 「전국 CCTV 표준데이터」 377,243건 (좌표 유효 100%)<br>
-    이동패턴 예측은 거리감쇠 × 중고거래 거점 가중치 × 경과시간 기반 규칙 산출이며, 통계적 발생 확률이 아닌 상대 순위 지표입니다.
+    이동패턴(모니터링 우선 지역)은 거리감쇠 × 시군구별 절도 발생 건수(경찰청_범죄 발생 지역별 통계 2024) × 경과시간 기반 규칙 산출이며, 지역 좌표는 CCTV 표준데이터의 시군구별 중앙값입니다. 통계적 발생 확률이 아닌 상대 순위 지표입니다.
   </div>
 </div>
 
@@ -139,15 +139,17 @@ async function runAll(){
     if(d.formula) h += `<div class="kv"><b>계산식</b><span style="font-family:monospace;font-size:11.5px">${esc(d.formula)}</span></div>`;
     const ps = d.predictions || [];
     if(ps.length){
-      h += '<table><tr><th>우선 수색 지역</th><th>거리</th><th>상대 순위</th></tr>';
+      h += '<table><tr><th>모니터링 우선 지역</th><th>거리</th><th>2024 절도(경찰청)</th><th>가중치</th><th>상대 순위</th></tr>';
       ps.forEach(p => {
-        h += `<tr><td>${esc(p.area)}</td><td>${p.distance_km}km</td>`
+        h += `<tr><td>${esc(p.area)}</td><td>${p.distance_km}km</td><td>${(p.theft_2024??0).toLocaleString()}건</td><td>${p.weight??'-'}</td>`
            + `<td><span class="bar" style="width:${p.probability*1.6}px"></span>${p.probability}%</td></tr>`;
       });
       h += '</table>';
     } else {
       h += `<div class="muted">${esc(d.note||'해당 반경 내 거점 없음')}</div>`;
     }
+    if(d.data_sources) h += d.data_sources.map(x=>`<div class="kv"><b>근거 · ${esc(x.use)}</b><span>${esc(x.name)}${x.note?` <span class="muted">(${esc(x.note)})</span>`:''}</span></div>`).join('');
+    if(d.assumptions) h += `<div class="kv"><b>가정값</b><span>${esc(d.assumptions.join(' / '))}</span></div>`;
     if(d.disclaimer) h += `<div class="muted" style="margin-top:8px">${esc(d.disclaimer)}</div>`;
     $('c2').innerHTML = h;
   }catch(e){ $('c2').innerHTML = `<span class="err">실패: ${esc(e.message)}</span>`; }
@@ -231,6 +233,12 @@ async function runAudit(){
     const tot = m1.predictions.reduce((s,p)=>s+p.probability,0);
     add('상대순위 합계 100%', tot===100, `합계 ${tot}%`);
     add('계산식·면책문구 명시', !!(m1.formula && m1.disclaimer));
+    const OLD_HUBS = ['서울 중랑 중고시장','서울 용산 전자상가','성남 모란시장','수원 영통','인천 부평','고양 화정','부산 구포시장','창원 상남시장','김해 내동','대전 중앙시장','광주 말바우시장'];
+    const allP = Object.values(mv).flatMap(d=>d.predictions);
+    add('가중치 출처(경찰청 2024 통계) 응답에 명시', JSON.stringify(m1.data_sources||[]).includes('3074462'),
+        (m1.data_sources||[]).map(x=>x.use+': '+x.name).join(' / '));
+    add('손으로 정한 거점 미사용 · 지역별 절도 건수 포함', allP.every(p=>!OLD_HUBS.includes(p.area) && p.theft_2024>0),
+        allP.slice(0,4).map(p=>`${p.area} ${p.theft_2024}건`).join(', '));
 
     // 3. 신고 자동화 산출
     const mk = h => { const d=new Date(Date.now()-h*3600*1000), p=n=>String(n).padStart(2,'0');
