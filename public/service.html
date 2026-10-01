@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 도난탐정 — 도난 대응 서비스</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060810;font-family:-apple-system,'Apple SD Gothic Neo','Pretendard',sans-serif;display:flex;min-height:100vh;overflow-x:hidden;color:#E5E7EB}
+#sidebar{width:220px;flex-shrink:0;background:#0A0C14;border-right:1px solid rgba(255,255,255,0.05);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:100}
+#sidebar-header{padding:16px 14px 12px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.logo{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.logo-icon{width:28px;height:28px;border-radius:9px;background:#6366F1;display:flex;align-items:center;justify-content:center}
+.logo-text{color:#fff;font-size:13px;font-weight:700}
+#sidebar-header .sub{color:#4B5563;font-size:10px}
+.sidebar-section{padding:10px 10px 6px;color:#374151;font-size:9px;font-weight:600;letter-spacing:.08em}
+.sidebar-item{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;border-radius:8px;margin:1px 6px;transition:background .15s;text-decoration:none}
+.sidebar-item:hover{background:rgba(255,255,255,0.04)}
+.sidebar-item.active{background:rgba(99,102,241,0.15)}
+.s-num{width:18px;height:18px;border-radius:5px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:#6B7280;font-weight:600}
+.sidebar-item.active .s-num{background:#6366F1;color:#fff}
+.s-name{color:#9CA3AF;font-size:11px;line-height:1.3}
+.sidebar-item.active .s-name{color:#C7D2FE}
+.s-tag{font-size:8px;color:#34D399;margin-left:4px}
+#main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+#topbar{background:#0A0C14;border-bottom:1px solid rgba(255,255,255,0.05);padding:12px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50}
+.home-btn{background:#1e1e30;color:#888;text-decoration:none;padding:5px 12px;border-radius:7px;font-size:12px;border:1px solid #2a2a3e;white-space:nowrap}
+#screen-info{flex:1;text-align:center}
+.s-title{color:#fff;font-size:14px;font-weight:600}
+.s-subtitle{color:#6B7280;font-size:11px;margin-top:1px}
+.api-badge{background:rgba(52,211,153,0.12);color:#34D399;font-size:10px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid rgba(52,211,153,0.2);white-space:nowrap}
+.api-badge.off{background:rgba(239,68,68,0.12);color:#F87171;border-color:rgba(239,68,68,0.25)}
+#progress-bar-wrap{background:#0A0C14;border-bottom:1px solid rgba(255,255,255,0.04);padding:8px 24px;display:flex;align-items:center;gap:12px}
+#progress-track{flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+#progress-fill{height:100%;background:#6366F1;border-radius:2px;transition:width .3s;width:0}
+#progress-label{color:#6B7280;font-size:11px;white-space:nowrap}
+#phone-area{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:28px 24px;gap:28px}
+.phone-shell{width:372px;background:#1C1F26;border-radius:36px;padding:12px;box-shadow:0 0 0 1px rgba(255,255,255,0.05),0 32px 64px rgba(0,0,0,0.7);flex-shrink:0}
+.screen{background:#0A0C10;border-radius:26px;overflow:hidden;height:700px;display:flex;flex-direction:column;position:relative}
+.slide{position:absolute;inset:0;display:none;flex-direction:column}
+.slide.active{display:flex}
+.statusbar{padding:14px 18px 8px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.statusbar span{color:#fff;font-size:12px;font-weight:500}
+.content{padding:0 16px 14px;flex:1;overflow-y:auto;overflow-x:hidden}
+.content::-webkit-scrollbar{width:2px}
+.content::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+.header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.header-title{color:#fff;font-size:15px;font-weight:600}
+.badge{font-size:9px;font-weight:600;padding:3px 8px;border-radius:12px;margin-left:auto;white-space:nowrap}
+.b-indigo{background:rgba(99,102,241,0.15);color:#818CF8}
+.b-green{background:rgba(52,211,153,0.15);color:#34D399}
+.b-red{background:rgba(239,68,68,0.15);color:#F87171}
+.b-gray{background:rgba(255,255,255,0.06);color:#9CA3AF}
+.card{border-radius:14px;padding:12px 13px;margin-bottom:10px}
+.card-dark{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)}
+.card-indigo{background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.18)}
+.card-green{background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.18)}
+.card-red{background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.18)}
+.label{color:#9CA3AF;font-size:11px}
+.value{color:#E5E7EB;font-size:12px;font-weight:500}
+.big{color:#fff;font-size:22px;font-weight:700;line-height:1.1}
+.sub{color:#6B7280;font-size:10.5px;margin-top:3px;line-height:1.5}
+.row{display:flex;align-items:center;gap:8px}
+.between{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.divider{height:1px;background:rgba(255,255,255,0.05);margin:8px 0}
+.field{margin-bottom:8px}
+.field label{display:block;color:#9CA3AF;font-size:10.5px;margin-bottom:4px}
+.field input{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:9px;padding:9px 10px;color:#fff;font-size:12px;font-family:inherit;outline:none}
+.field input:focus{border-color:#6366F1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#D1D5DB;font-size:10.5px;padding:5px 9px;border-radius:20px;cursor:pointer}
+.chip.on{background:rgba(99,102,241,0.2);border-color:#6366F1;color:#C7D2FE}
+.btn{border:none;border-radius:11px;padding:12px;width:100%;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:6px}
+.btn-primary{background:#6366F1;color:#fff}
+.btn-primary:hover{background:#5458e6}
+.btn-ghost{background:rgba(255,255,255,0.06);color:#D1D5DB}
+.btn-green{background:#10B981;color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.photos{display:flex;gap:6px;margin-top:6px}
+.photos img{width:64px;height:64px;object-fit:cover;border-radius:9px;border:1px solid rgba(255,255,255,0.1)}
+.upload{display:flex;align-items:center;justify-content:center;gap:6px;border:1px dashed rgba(255,255,255,0.15);border-radius:10px;padding:10px;color:#9CA3AF;font-size:11px;cursor:pointer}
+#map{height:250px;border-radius:14px;margin-bottom:10px;border:1px solid rgba(255,255,255,0.08)}
+.list-item{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:11px}
+.list-item:last-child{border-bottom:none}
+.li-main{color:#E5E7EB;font-weight:500}
+.li-sub{color:#6B7280;font-size:10px;margin-top:2px}
+.bar{height:6px;border-radius:3px;background:#6366F1}
+.bar-track{height:6px;border-radius:3px;background:rgba(255,255,255,0.06);margin-top:5px}
+.steps{display:flex;align-items:center;gap:4px;margin-bottom:12px}
+.step{flex:1;text-align:center}
+.dot{width:20px;height:20px;border-radius:50%;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:rgba(255,255,255,0.06);color:#6B7280}
+.step.done .dot{background:#6366F1;color:#fff}
+.step.now .dot{background:#34D399;color:#062}
+.step.end .dot{background:#F59E0B;color:#311}
+.step-l{font-size:8.5px;color:#6B7280;line-height:1.25}
+.step.done .step-l,.step.now .step-l{color:#C7D2FE}
+.tl{position:relative;padding-left:14px}
+.tl:before{content:'';position:absolute;left:4px;top:4px;bottom:4px;width:1px;background:rgba(255,255,255,0.08)}
+.tl-item{position:relative;margin-bottom:9px}
+.tl-item:before{content:'';position:absolute;left:-13px;top:4px;width:7px;height:7px;border-radius:50%;background:#6366F1}
+.tl-item.k-detection:before{background:#F59E0B}
+.tl-item.k-police:before{background:#34D399}
+.tl-t{font-size:11px;color:#E5E7EB}
+.tl-s{font-size:9.5px;color:#6B7280;margin-top:1px}
+.crit{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.crit:last-child{border-bottom:none}
+.ck{width:18px;height:18px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.ck.ok{background:rgba(52,211,153,0.18);color:#34D399}
+.ck.no{background:rgba(239,68,68,0.18);color:#F87171}
+.ck.ref{background:rgba(255,255,255,0.06);color:#9CA3AF}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#111827;border:1px solid rgba(255,255,255,0.1);color:#fff;font-size:12px;padding:9px 16px;border-radius:10px;opacity:0;transition:opacity .2s;z-index:999}
+.toast.show{opacity:1}
+.note{font-size:9.5px;color:#4B5563;line-height:1.5;margin-top:6px}
+#side-panel{width:300px;flex-shrink:0;color:#9CA3AF;font-size:12px;line-height:1.7}
+#side-panel h4{color:#fff;font-size:13px;margin-bottom:8px}
+#side-panel .sp-card{background:#0A0C14;border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:14px;margin-bottom:12px}
+#side-panel code{background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;font-size:11px;color:#C7D2FE}
+.leaflet-popup-content{font-size:11px;line-height:1.5;margin:8px 10px}
+.leaflet-container{background:#0b0d13}
+.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6)}
+@media (max-width:1100px){#side-panel{display:none}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div id="sidebar-header">
+    <div class="logo">
+      <div class="logo-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
+      <span class="logo-text">AI 도난탐정</span>
+    </div>
+    <div class="sub">도난 대응 서비스</div>
+  </div>
+  <div class="sidebar-section">도난 대응</div>
+  <div class="sidebar-item" data-go="0"><span class="s-num">13</span><span class="s-name">도난 정보 입력</span></div>
+  <div class="sidebar-item" data-go="1"><span class="s-num">14</span><span class="s-name">CCTV 지도·열람<span class="s-tag">API</span></span></div>
+  <div class="sidebar-item" data-go="2"><span class="s-num">15</span><span class="s-name">모니터링 우선 지역<span class="s-tag">API</span></span></div>
+  <div class="sidebar-item" data-go="3"><span class="s-num">16</span><span class="s-name">112 신고서<span class="s-tag">API</span></span></div>
+  <div class="sidebar-section">추적·보상</div>
+  <div class="sidebar-item" data-go="4"><span class="s-num">17</span><span class="s-name">추적 현황<span class="s-tag">API</span></span></div>
+  <div class="sidebar-item" data-go="5"><span class="s-num">18</span><span class="s-name">보상 신청<span class="s-tag">API</span></span></div>
+  <div class="sidebar-section">바로가기</div>
+  <a class="sidebar-item" href="/app"><span class="s-num">←</span><span class="s-name">기존 앱 화면</span></a>
+  <a class="sidebar-item" href="/verify"><span class="s-num">✓</span><span class="s-name">기능 자동 검증</span></a>
+</nav>
+
+<div id="main">
+  <div id="topbar">
+    <a class="home-btn" href="/app">← 앱</a>
+    <div id="screen-info"><div class="s-title" id="t-title">도난 정보 입력</div><div class="s-subtitle" id="t-sub">자전거 정보와 도난 위치</div></div>
+    <span class="api-badge" id="api-badge">API 확인 중</span>
+  </div>
+  <div id="progress-bar-wrap"><div id="progress-track"><div id="progress-fill"></div></div><span id="progress-label">1 / 6</span></div>
+
+  <div id="phone-area">
+    <div class="phone-shell"><div class="screen">
+
+      <!-- 13 도난 정보 -->
+      <div class="slide" id="s0"><div class="statusbar"><span>9:41</span><span>LTE</span></div><div class="content">
+        <div class="header"><span class="header-title">도난 정보 입력</span><span class="badge b-red">도난 신고</span></div>
+        <div class="label" style="margin-bottom:6px">도난 위치</div>
+        <div class="chips" id="loc-chips"></div>
+        <div class="card card-dark" style="padding:9px 12px"><div class="between"><span class="label">선택 좌표</span><span class="value" id="coord-text">-</span></div></div>
+        <div class="grid2">
+          <div class="field"><label>브랜드</label><input id="f-brand" placeholder="예: 삼천리"></div>
+          <div class="field"><label>모델</label><input id="f-model" placeholder="예: 팬텀 Q"></div>
+          <div class="field"><label>색상</label><input id="f-color" placeholder="예: 검정"></div>
+          <div class="field"><label>차대번호</label><input id="f-serial" placeholder="프레임 하단 각인"></div>
+        </div>
+        <div class="field"><label>도난 장소</label><input id="f-place" placeholder="예: 강남역 2번 출구 자전거 거치대"></div>
+        <div class="field"><label>도난 추정 일시</label><input id="f-time" type="datetime-local"></div>
+        <div class="field"><label>자전거 사진 (최대 3장 · 신고서에 첨부)</label>
+          <label class="upload" for="f-photos">＋ 사진 선택</label>
+          <input id="f-photos" type="file" accept="image/*" multiple style="display:none">
+          <div class="photos" id="photo-thumbs"></div>
+        </div>
+        <button class="btn btn-ghost" id="btn-sample">시연용 예시 입력</button>
+        <button class="btn btn-primary" id="btn-start">사건 등록하고 대응 시작</button>
+        <div class="note">사건이 등록되면 중고마켓 모니터링 대상에 올라갑니다. 탐지·매칭은 중고마켓 감시 엔진(외부 용역)이 수행하고 결과가 이 사건에 기록됩니다.</div>
+      </div></div>
+
+      <!-- 14 CCTV 지도 -->
+      <div class="slide" id="s1"><div class="statusbar"><span>9:41</span><span>LTE</span></div><div class="content">
+        <div class="header"><span class="header-title">주변 CCTV 지도</span><span class="badge b-indigo" id="cctv-badge">공공데이터</span></div>
+        <div id="map"></div>
+        <div class="grid2" style="margin-bottom:10px">
+          <div class="card card-indigo" style="margin:0"><div class="big" id="cctv-count">-</div><div class="sub" id="cctv-count-sub">반경 내 CCTV</div></div>
+          <div class="card card-red" style="margin:0"><div class="big" id="cctv-left">-</div><div class="sub" id="cctv-left-sub">열람 신청 잔여일</div></div>
+        </div>
+        <div class="card card-dark"><div class="label" style="margin-bottom:4px">관리기관 (열람 문의처)</div><div id="cctv-agencies"></div></div>
+        <div class="card card-dark"><div class="label" style="margin-bottom:4px">가까운 CCTV</div><div id="cctv-list"></div></div>
+        <div class="card card-dark"><div class="between"><span class="label">열람 절차</span><span class="badge b-gray" id="guide-toggle" style="cursor:pointer;margin:0">펼치기</span></div><div id="guide" style="display:none;margin-top:8px"></div></div>
+        <div class="note" id="cctv-note">지도를 누르면 도난 위치를 옮겨 다시 조회합니다.</div>
+        <button class="btn btn-primary" data-next="2">모니터링 우선 지역 보기</button>
+      </div></div>
+
+      <!-- 15 모니터링 지역 -->
+      <div class="slide" id="s2"><div class="statusbar"><span>9:41</span><span>LTE</span></div><div class="content">
+        <div class="header"><span class="header-title">모니터링 우선 지역</span><span class="badge b-indigo">중고마켓 감시</span></div>
+        <div class="card card-indigo"><div class="sub" style="margin:0;color:#A5B4FC">도난 지점과 경과 시간으로 중고마켓 감시 엔진의 탐색 지역 우선순위를 정합니다. 탐색 반경 <b id="mv-radius">-</b></div></div>
+        <div class="card card-dark" id="mv-list"></div>
+        <div class="note" id="mv-formula"></div>
+        <button class="btn btn-primary" data-next="3">112 신고서 만들기</button>
+      </div></div>
+
+      <!-- 16 112 신고서 -->
+      <div class="slide" id="s3"><div class="statusbar"><span>9:41</span><span>LTE</span></div><div class="content">
+        <div class="header"><span class="header-title">112 신고서</span><span class="badge b-green">PDF 자동 생성</span></div>
+        <div class="card card-dark">
+          <div class="label" style="margin-bottom:6px">신고서에 자동으로 들어가는 것</div>
+          <div class="list-item"><span>자전거 정보·차대번호</span><span class="value" id="r-bike">-</span></div>
+          <div class="list-item"><span>피해 물품 사진</span><span class="value" id="r-photos">0장</span></div>
+          <div class="list-item"><span>주변 CCTV·관리기관</span><span class="value" id="r-cctv">-</span></div>
+          <div class="list-item"><span>열람 요청 구간·기한</span><span class="value">도난시각 ±30분</span></div>
+          <div class="list-item"><span>가까운 경찰관서</span><span class="value">좌표 기준</span></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>신고인 성명</label><input id="f-name" placeholder="선택"></div>
+          <div class="field"><label>연락처</label><input id="f-phone" placeholder="선택"></div>
+        </div>
+        <button class="btn btn-primary" id="btn-112">신고서 PDF 받기</button>
+        <div class="card card-green" style="margin-top:10px">
+          <div class="label" style="color:#6EE7B7;margin-bottom:4px">신고 방법</div>
+          <div class="sub" style="margin:0;color:#A7F3D0">① 112 전화 신고 → 출동 경찰관에게 진술<br>② 가까운 경찰서·지구대·파출소 방문 신고<br>준비: 도난 시간대 · 차대번호 · 사진 (이 신고서)<br>습득 자전거 조회: LOST112</div>
+          <div class="note">출처: 양천구청 「도난자전거 신고방법」</div>
+        </div>
+        <button class="btn btn-ghost" data-next="4">추적 현황으로</button>
+      </div></div>
+
+      <!-- 17 추적 현황 -->
+      <div class="slide" id="s4"><div class="statusbar"><span>9:41</span><span>LTE</span></div><div class="content">
+        <div class="header"><span class="header-title">추적 현황</span><span class="badge b-indigo" id="stage-badge">-</span></div>
+        <div class="steps" id="steps"></div>
+        <div class="card card-dark">
+          <div class="label" style="margin-bottom:6px">112 신고 접수 정보</div>
+          <div class="grid2">
+            <div class="field"><label>접수번호</label><input id="p-no" placeholder="경찰 접수번호"></div>
+            <div class="field"><label>관할 경찰관서</label><input id="p-station" placeholder="예: 강남경찰서"></div>
+          </div>
+          <div class="field"><label>신고일</label><input id="p-date" type="date"></div>
+          <button class="btn btn-ghost" id="btn-police" style="margin-top:0">접수 정보 저장</button>
+        </div>
+        <div class="card card-dark">
+          <div class="between"><span class="label">중고마켓 탐지 결과</span><span class="badge b-gray" id="det-count" style="margin:0">0건</span></div>
+          <div id="det-list" style="margin-top:6px"></div>
+          <button class="btn btn-ghost" id="btn-det" style="font-size:11px;padding:9px">감시 엔진 연동 테스트 (예시 데이터 수신)</button>
+        </div>
+        <div class="card card-dark"><div class="label" style="margin-bottom:8px">사건 기록</div><div class="tl" id="timeline"></div></div>
+        <button class="btn btn-green" id="btn-recovered">회수 완료 처리</button>
+        <button class="btn btn-primary" data-next="5">보상 신청 확인</button>
+      </div></div>
+
+      <!-- 18 보상 신청 -->
+      <div class="slide" id="s5"><div class="statusbar"><span>9:41</span><span>LTE</span></div><div class="content">
+        <div class="header"><span class="header-title">추적 지원·보상</span><span class="badge b-indigo">시범</span></div>
+        <div class="card" id="elig-card"><div class="big" id="elig-big">-</div><div class="sub" id="elig-sub"></div></div>
+        <div class="card card-dark"><div class="label" style="margin-bottom:2px">회수 실패 판정 기준</div><div id="criteria"></div><div class="note" id="crit-basis"></div></div>
+        <button class="btn btn-primary" id="btn-eval">회수 실패 판정 실행</button>
+        <button class="btn btn-green" id="btn-pack">보상 신청 패키지 PDF 받기</button>
+        <div class="card card-dark" style="margin-top:10px"><div class="label" style="margin-bottom:4px">제출 서류</div><div id="docs"></div></div>
+        <div class="card card-dark"><div class="label" style="margin-bottom:4px">보상 조건</div><div id="conds"></div><div class="note">시범 운영 결과를 반영해 확정합니다.</div></div>
+      </div></div>
+
+    </div></div>
+
+    <aside id="side-panel">
+      <div class="sp-card"><h4>이 화면이 하는 일</h4>
+        도난 위치·시각 입력 → 주변 CCTV 지도 → 중고마켓 모니터링 지역 → 112 신고서 PDF → 추적 상태 → 회수 실패 시 보상 신청 패키지 PDF</div>
+      <div class="sp-card"><h4>사용 데이터</h4>
+        공공데이터포털 「전국 CCTV 표준데이터」 <b style="color:#fff">377,243건</b><br>회수 실패 판정: 신고 후 <code id="sp-wait">30</code>일 경과 기준</div>
+      <div class="sp-card"><h4>외부 연동 자리</h4>
+        중고마켓 탐지 결과 <code>POST /api/track/{id}/detections</code><br>등록원부 번호 <code>POST /api/track/{id}/registration</code><br>도난 입증 판정 <code>POST /api/track/{id}/verification</code></div>
+      <div class="sp-card" id="sp-case"><h4>현재 사건</h4><span id="sp-case-id">등록 전</span></div>
+    </aside>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const TITLES = [
+  ['도난 정보 입력','자전거 정보와 도난 위치'],
+  ['CCTV 지도·열람 안내','공공 CCTV 377,243건 기준'],
+  ['모니터링 우선 지역','중고마켓 감시 탐색 범위'],
+  ['112 신고서','사진·CCTV·관할 자동 포함'],
+  ['추적 현황','사건 상태와 탐지 기록'],
+  ['보상 신청','회수 실패 판정과 신청 패키지'],
+];
+const LOCS = [
+  {n:'서울 강남역', lat:37.4979, lng:127.0276, place:'서울 강남역 2번 출구 자전거 거치대'},
+  {n:'부산 서면', lat:35.1578, lng:129.0596, place:'부산 서면역 7번 출구 거치대'},
+  {n:'김해시청', lat:35.2285, lng:128.8894, place:'김해시청 앞 자전거 보관대'},
+  {n:'대구 칠성시장', lat:35.8797, lng:128.5990, place:'대구 칠성시장 입구'},
+];
+const S = {idx:0, lat:LOCS[0].lat, lng:LOCS[0].lng, caseId:null, photos:[], cctv:null, bundle:null, map:null, layer:null};
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const toLocalInput = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const toApi = v => v ? v.replace('T',' ') : '';
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2200); }
+async function api(path, opt={}){
+  const r = await fetch(path, {headers:{'Content-Type':'application/json'}, ...opt});
+  const ct = r.headers.get('content-type')||'';
+  if(!r.ok){ let m='HTTP '+r.status; try{ const j=await r.json(); m=j.error||m; }catch(e){} throw new Error(m); }
+  return ct.includes('application/json') ? r.json() : r.blob();
+}
+async function download(path, opt, name){
+  const blob = await api(path, opt);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+
+// ---------- 화면 전환
+function go(i){
+  S.idx = i;
+  document.querySelectorAll('.slide').forEach((s,k)=>s.classList.toggle('active', k===i));
+  document.querySelectorAll('.sidebar-item[data-go]').forEach(el=>el.classList.toggle('active', +el.dataset.go===i));
+  $('t-title').textContent = TITLES[i][0]; $('t-sub').textContent = TITLES[i][1];
+  $('progress-fill').style.width = ((i+1)/6*100)+'%'; $('progress-label').textContent = `${i+1} / 6`;
+  if(i===1) loadCctv();
+  if(i===2) loadMovement();
+  if(i===3) fill112();
+  if(i>=4) refreshCase();
+}
+document.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>go(+el.dataset.go)));
+document.querySelectorAll('[data-next]').forEach(el=>el.addEventListener('click',()=>go(+el.dataset.next)));
+
+// ---------- 13 도난 정보
+function renderChips(){
+  $('loc-chips').innerHTML = LOCS.map((l,k)=>`<span class="chip ${Math.abs(l.lat-S.lat)<1e-6&&Math.abs(l.lng-S.lng)<1e-6?'on':''}" data-k="${k}">${l.n}</span>`).join('');
+  $('loc-chips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ const l=LOCS[+c.dataset.k]; S.lat=l.lat; S.lng=l.lng; if(!$('f-place').value) $('f-place').value=l.place; renderChips(); });
+  $('coord-text').textContent = `${S.lat.toFixed(4)}, ${S.lng.toFixed(4)}`;
+}
+$('f-time').value = toLocalInput(new Date(Date.now()-2*3600e3));
+$('btn-sample').onclick = ()=>{
+  $('f-brand').value='삼천리'; $('f-model').value='팬텀 Q'; $('f-color').value='무광 블랙'; $('f-serial').value='WSBC4012345678';
+  const l = LOCS.find(x=>Math.abs(x.lat-S.lat)<1e-6) || LOCS[0]; $('f-place').value = l.place;
+  $('f-time').value = toLocalInput(new Date(Date.now()-36*864e5));
+  const pd = new Date(Date.now()-35*864e5);
+  $('p-no').value = '시연-2026-0001'; $('p-station').value = '관할 경찰서';
+  $('p-date').value = `${pd.getFullYear()}-${pad(pd.getMonth()+1)}-${pad(pd.getDate())}`;
+  toast('예시 입력: 36일 전 도난 · 35일 전 112 신고');
+};
+$('f-photos').onchange = async e=>{
+  const files = [...e.target.files].slice(0,3); S.photos = [];
+  for(const f of files){ S.photos.push(await shrink(f)); }
+  $('photo-thumbs').innerHTML = S.photos.map(p=>`<img src="${p}">`).join('');
+};
+function shrink(file){ return new Promise(res=>{ const img=new Image(); img.onload=()=>{ const m=1280, s=Math.min(1,m/Math.max(img.width,img.height)); const c=document.createElement('canvas'); c.width=Math.round(img.width*s); c.height=Math.round(img.height*s); c.getContext('2d').drawImage(img,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',0.82)); }; img.src=URL.createObjectURL(file); }); }
+$('btn-start').onclick = async ()=>{
+  const b = $('btn-start'); b.disabled = true; b.textContent = '등록 중…';
+  try{
+    const r = await api('/api/track/start',{method:'POST', body:JSON.stringify({
+      brand:$('f-brand').value, model:$('f-model').value, color:$('f-color').value, serial:$('f-serial').value,
+      location:$('f-place').value, lat:S.lat, lng:S.lng, theft_at:toApi($('f-time').value)})});
+    S.caseId = r.case_id; S.bundle = r; $('sp-case-id').textContent = r.case_id;
+    toast('사건 등록 완료 · 모니터링 시작'); go(1);
+  }catch(e){ toast('등록 실패: '+e.message); }
+  b.disabled = false; b.textContent = '사건 등록하고 대응 시작';
+};
+
+// ---------- 14 CCTV 지도
+function ensureMap(){
+  if(S.map) return;
+  S.map = L.map('map', {zoomControl:false, attributionControl:true}).setView([S.lat,S.lng], 16);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:19, attribution:'&copy; OpenStreetMap contributors'}).addTo(S.map);
+  S.layer = L.layerGroup().addTo(S.map);
+  S.map.on('click', e=>{ S.lat=e.latlng.lat; S.lng=e.latlng.lng; renderChips(); loadCctv(); });
+}
+async function loadCctv(){
+  ensureMap(); setTimeout(()=>S.map.invalidateSize(), 60);
+  try{
+    const d = await api('/api/cctv/nearby',{method:'POST', body:JSON.stringify({lat:S.lat,lng:S.lng,radius:200})});
+    S.cctv = d; S.layer.clearLayers();
+    L.circle([S.lat,S.lng],{radius:d.radius_used,color:'#6366F1',weight:1,fillColor:'#6366F1',fillOpacity:0.08}).addTo(S.layer);
+    L.circleMarker([S.lat,S.lng],{radius:7,color:'#fff',weight:2,fillColor:'#EF4444',fillOpacity:1}).addTo(S.layer).bindPopup('<b>도난 위치</b>');
+    d.cctvs.forEach(c=>{
+      L.circleMarker([c.lat,c.lng],{radius:5,color:c.priority?'#A5B4FC':'#6B7280',weight:1,fillColor:c.priority?'#6366F1':'#4B5563',fillOpacity:0.9})
+        .addTo(S.layer).bindPopup(`<b>${esc(c.purpose)} · ${c.cameras||1}대</b><br>${esc(c.agency)}<br>${esc(c.tel||'연락처 미등록')}<br>보관 ${c.retention_days}일 · ${c.distance_m}m`);
+    });
+    S.map.setView([S.lat,S.lng], d.radius_used>500?14:d.radius_used>200?15:16);
+    $('cctv-count').textContent = d.total+'개소';
+    $('cctv-count-sub').textContent = d.expanded ? `반경 ${d.radius_m}m 0건 → ${d.radius_used}m 확대` : `반경 ${d.radius_used}m 내 CCTV`;
+    $('cctv-badge').textContent = d.source==='public_data' ? '공공데이터' : d.source;
+    const keeps = d.cctvs.map(c=>c.retention_days).filter(Boolean);
+    const minKeep = keeps.length ? Math.min(...keeps) : null;
+    const t0 = new Date(($('f-time').value||toLocalInput(new Date())));
+    const left = minKeep ? Math.ceil((t0.getTime()+minKeep*864e5-Date.now())/864e5) : null;
+    $('cctv-left').textContent = left===null ? '-' : (left>0 ? left+'일' : '만료');
+    $('cctv-left-sub').textContent = minKeep ? `영상 보관 최단 ${minKeep}일 기준` : '보관기간 정보 없음';
+    const ag = {}; d.cctvs.forEach(c=>{ (ag[c.agency] ||= {n:c.agency, tel:c.tel, k:0, m:c.distance_m}).k++; ag[c.agency].m=Math.min(ag[c.agency].m,c.distance_m); });
+    const agl = Object.values(ag).sort((a,b)=>a.m-b.m).slice(0,3);
+    $('cctv-agencies').innerHTML = agl.length ? agl.map(a=>`<div class="list-item"><div><div class="li-main">${esc(a.n)}</div><div class="li-sub">${esc(a.tel||'연락처 미등록')}</div></div><span class="value">${a.k}개소</span></div>`).join('') : '<div class="sub">반경 1km 내 공공 CCTV 없음</div>';
+    $('cctv-list').innerHTML = d.cctvs.slice(0,5).map(c=>`<div class="list-item"><div><div class="li-main">${esc(c.purpose)} · ${c.cameras||1}대</div><div class="li-sub">${esc((c.address||'').slice(0,28))}</div></div><span class="value">${c.distance_m}m</span></div>`).join('') || '<div class="sub">조회 결과 없음</div>';
+    $('cctv-note').textContent = d.note + ' · 지도를 누르면 위치를 옮겨 다시 조회합니다.';
+    const g = await api(`/api/cctv/access-guide?lat=${S.lat}&lng=${S.lng}`);
+    $('guide').innerHTML = g.steps.map(s=>`<div class="list-item"><div><div class="li-main">${s.step}. ${esc(s.title)}</div><div class="li-sub">${esc(s.detail)}</div></div></div>`).join('') + `<div class="note">${esc(g.legal_basis)}</div>`;
+  }catch(e){ toast('CCTV 조회 실패: '+e.message); }
+}
+$('guide-toggle').onclick = ()=>{ const g=$('guide'); const on=g.style.display==='none'; g.style.display=on?'block':'none'; $('guide-toggle').textContent=on?'접기':'펼치기'; };
+
+// ---------- 15 모니터링 지역
+async function loadMovement(){
+  const t0 = new Date(($('f-time').value||toLocalInput(new Date())));
+  const hours = Math.max((Date.now()-t0.getTime())/3600e3, 1);
+  try{
+    const d = await api('/api/predict-movement',{method:'POST', body:JSON.stringify({lat:S.lat,lng:S.lng,hours_elapsed:Math.min(hours,24*5)})});
+    $('mv-radius').textContent = d.search_radius_km+'km';
+    $('mv-list').innerHTML = (d.predictions||[]).map((p,k)=>`<div style="margin-bottom:9px"><div class="between"><span class="li-main" style="font-size:12px">${k+1}. ${esc(p.area)}</span><span class="value">${p.probability}%</span></div><div class="li-sub">도난 지점에서 ${p.distance_km}km</div><div class="bar-track"><div class="bar" style="width:${p.probability}%"></div></div></div>`).join('') || `<div class="sub">${esc(d.note||'탐색 반경 내 거점 없음')}</div>`;
+    $('mv-formula').textContent = (d.disclaimer||'') + ' 산출식: ' + (d.formula||'');
+  }catch(e){ toast('지역 산출 실패: '+e.message); }
+}
+
+// ---------- 16 112 신고서
+function fill112(){
+  $('r-bike').textContent = [$('f-brand').value,$('f-model').value].filter(Boolean).join(' ') || '-';
+  $('r-photos').textContent = S.photos.length+'장';
+  $('r-cctv').textContent = S.cctv ? `${S.cctv.total}개소` : '조회 후 포함';
+}
+$('btn-112').onclick = async ()=>{
+  const b=$('btn-112'); b.disabled=true; b.textContent='PDF 생성 중…';
+  try{
+    await download('/api/report/112-form',{method:'POST', body:JSON.stringify({
+      report_id: S.caseId || undefined,
+      stolen_info:{brand:$('f-brand').value, model:$('f-model').value, color:$('f-color').value, serial:$('f-serial').value,
+                   location:$('f-place').value, time:toApi($('f-time').value)},
+      reporter:{name:$('f-name').value, phone:$('f-phone').value},
+      lat:S.lat, lng:S.lng, photos:S.photos, scan_results:[]})}, `도난신고서_${S.caseId||'ATD'}.pdf`);
+    toast('신고서 PDF를 받았습니다');
+  }catch(e){ toast('생성 실패: '+e.message); }
+  b.disabled=false; b.textContent='신고서 PDF 받기';
+};
+
+// ---------- 17 추적 현황
+const FLOW = ['reported','searching','unrecovered','review','approved'];
+const FLOW_L = {reported:'신고 접수', searching:'탐색 중', unrecovered:'회수 실패', review:'보상 심사', approved:'보상 확정'};
+function needCase(){ if(!S.caseId){ toast('먼저 13번 화면에서 사건을 등록하세요'); go(0); return true; } return false; }
+async function refreshCase(){
+  if(!S.caseId){ $('steps').innerHTML=''; $('timeline').innerHTML='<div class="sub">사건 등록 전입니다.</div>'; $('elig-big').textContent='사건 등록 전'; return; }
+  try{ S.bundle = await api('/api/track/'+S.caseId); render(); }catch(e){ toast('조회 실패: '+e.message); }
+}
+function render(){
+  const b = S.bundle; const st = b.stage;
+  $('stage-badge').textContent = b.stage_label;
+  const idx = FLOW.indexOf(st);
+  $('steps').innerHTML = st==='recovered'
+    ? `<div class="card card-green" style="width:100%;margin:0"><div class="li-main">회수 완료</div><div class="li-sub">사건이 종결되었습니다</div></div>`
+    : FLOW.map((f,k)=>`<div class="step ${k<idx?'done':k===idx?(st==='rejected'?'end':'now'):''}"><div class="dot">${k+1}</div><div class="step-l">${FLOW_L[f]}</div></div>`).join('');
+  if(b.police && b.police.report_no){ $('p-no').value=b.police.report_no; $('p-station').value=b.police.station||''; $('p-date').value=(b.police.reported_at||'').slice(0,10); }
+  $('det-count').textContent = b.detections.length+'건';
+  $('det-list').innerHTML = b.detections.map(d=>`<div class="list-item"><div><div class="li-main">${esc(d.platform)} · ${esc(d.title)}</div><div class="li-sub">${esc(d.region)} · ${esc(d.price)} · 출처 ${esc(d.source)}</div></div><span class="value">${d.similarity}%</span></div>`).join('') || '<div class="sub">아직 수신된 의심 매물이 없습니다</div>';
+  $('timeline').innerHTML = b.events.slice().reverse().map(e=>`<div class="tl-item k-${e.kind}"><div class="tl-t">${esc(e.title)}</div><div class="tl-s">${esc(e.at)} · ${esc(e.source)}</div></div>`).join('');
+  // 18
+  const ev = b.evaluation; const el = ev.criteria.find(c=>c.key==='elapsed');
+  const card = $('elig-card');
+  card.className = 'card ' + (st==='recovered' ? 'card-green' : ev.eligible || ['review','approved'].includes(st) ? 'card-indigo' : 'card-dark');
+  $('elig-big').textContent = st==='recovered' ? '회수 완료' : ['review','approved','rejected'].includes(st) ? b.stage_label : ev.eligible ? '판정 기준 충족' : (el.days_left!=null ? `판정까지 ${el.days_left}일` : '신고 정보 필요');
+  $('elig-sub').textContent = st==='review' ? '회수 실패 판정 완료 · 보상 심사 대상입니다' : ev.eligible ? '판정을 실행하면 보상 심사 대상으로 전환됩니다' : '필수 기준 3개가 모두 충족되면 판정됩니다';
+  $('criteria').innerHTML = ev.criteria.map(c=>`<div class="crit"><div class="ck ${!c.required?'ref':c.passed?'ok':'no'}">${c.passed?'✓':!c.required?'·':'✕'}</div><div><div class="li-main" style="font-size:11.5px">${esc(c.label)}${c.required?'':''}</div><div class="li-sub">${esc(c.value)}</div></div></div>`).join('');
+  $('crit-basis').textContent = `기준 ${ev.wait_days}일 근거: ${ev.wait_days_basis}`;
+  $('sp-wait').textContent = ev.wait_days;
+  $('btn-eval').disabled = !(['reported','searching'].includes(st));
+  $('docs').innerHTML = b.required_docs.map(d=>`<div class="list-item"><div><div class="li-main">${esc(d.doc)}</div><div class="li-sub">${esc(d.where)} · ${esc(d.why)}</div></div></div>`).join('');
+  $('conds').innerHTML = Object.entries(b.conditions).map(([k,v])=>`<div class="list-item"><span>${esc(k)}</span><span class="value">${esc(v)}</span></div>`).join('');
+}
+$('btn-police').onclick = async ()=>{
+  if(needCase()) return;
+  try{ S.bundle = await api(`/api/track/${S.caseId}/police`,{method:'POST', body:JSON.stringify({report_no:$('p-no').value, station:$('p-station').value, reported_at:$('p-date').value})}); render(); toast('112 접수 정보 저장'); }
+  catch(e){ toast(e.message); }
+};
+$('btn-det').onclick = async ()=>{
+  if(needCase()) return;
+  const items = [
+    {platform:'번개장터', title:`${$('f-model').value||'자전거'} 급처 팝니다`, price:'45만원', similarity:84, region:'인근 지역'},
+    {platform:'중고나라', title:'로드자전거 정리합니다', price:'38만원', similarity:61, region:'인근 지역'},
+  ];
+  try{ S.bundle = await api(`/api/track/${S.caseId}/detections`,{method:'POST', body:JSON.stringify({source:'connector-test', items})}); render(); toast('예시 탐지 결과 2건 수신'); }
+  catch(e){ toast(e.message); }
+};
+$('btn-recovered').onclick = async ()=>{
+  if(needCase()) return;
+  try{ S.bundle = await api(`/api/track/${S.caseId}/recovered`,{method:'POST', body:JSON.stringify({note:'서비스 화면에서 회수 처리'})}); render(); toast('회수 완료 처리'); }
+  catch(e){ toast(e.message); }
+};
+// 18
+$('btn-eval').onclick = async ()=>{
+  if(needCase()) return;
+  try{ const r = await api(`/api/track/${S.caseId}/evaluate`,{method:'POST'}); await refreshCase();
+       toast(r.transitioned && r.transitioned.length ? '회수 실패 판정 → 보상 심사 대상 전환' : '아직 기준 미충족'); }
+  catch(e){ toast(e.message); }
+};
+$('btn-pack').onclick = async ()=>{
+  if(needCase()) return;
+  const b=$('btn-pack'); b.disabled=true; b.textContent='PDF 생성 중…';
+  try{ await download(`/api/track/${S.caseId}/compensation-pack`,{method:'GET'}, `보상신청패키지_${S.caseId}.pdf`); toast('보상 신청 패키지를 받았습니다'); }
+  catch(e){ toast(e.message); }
+  b.disabled=false; b.textContent='보상 신청 패키지 PDF 받기';
+};
+
+// ---------- 시작
+(async ()=>{
+  renderChips(); go(0);
+  try{ const h = await api('/healthcheck'); $('api-badge').textContent = `API 연결됨 · ${h.commit||''}`; }
+  catch(e){ $('api-badge').textContent='API 연결 실패'; $('api-badge').classList.add('off'); }
+})();
+</script>
+</body>
+</html>

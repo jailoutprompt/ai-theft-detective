@@ -7,3 +7,4 @@ apscheduler
 reportlab
 sqlalchemy>=2.0
 slowapi
+pillow

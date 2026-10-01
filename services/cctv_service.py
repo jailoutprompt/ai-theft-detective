@@ -80,6 +80,31 @@ def find_nearby(lat: float, lng: float, radius_m: float = 200,
     return out[:limit]
 
 
+EXPAND_STEPS = (500, 1000)
+
+
+def find_nearby_expanding(lat: float, lng: float, radius_m: float = 200,
+                          limit: int = 30, steps=EXPAND_STEPS) -> dict:
+    """반경 내 0건이면 목업 대신 반경을 넓혀 실데이터를 다시 찾는다.
+
+    200m → 500m → 1000m. 그래도 없으면 0건을 그대로 돌려준다.
+    """
+    tried = [float(radius_m)] + [float(s) for s in steps if s > radius_m]
+    rows, used = [], float(radius_m)
+    for r in tried:
+        used = r
+        rows = find_nearby(lat, lng, radius_m=r, limit=limit)
+        if rows:
+            break
+    return {
+        "cctvs": rows,
+        "radius_requested": int(radius_m),
+        "radius_used": int(used),
+        "expanded": int(used) != int(radius_m),
+        "tried": [int(r) for r in tried[:tried.index(used) + 1]],
+    }
+
+
 def summarize(cctvs: list) -> dict:
     """열람 신청 시 필요한 요약 정보."""
     if not cctvs:

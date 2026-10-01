@@ -38,7 +38,9 @@ def build_evidence_pack(lat: float, lng: float,
     hours = max((now - t0).total_seconds() / 3600.0, 0.5)
 
     # 1) 주변 CCTV
-    cctvs = cctv_service.find_nearby(lat, lng, radius_m=radius_m, limit=20)
+    found = cctv_service.find_nearby_expanding(lat, lng, radius_m=radius_m, limit=20)
+    cctvs = found["cctvs"]
+    radius_m = found["radius_used"]  # 0건이면 500m·1000m 로 넓혀 실데이터를 찾는다
     summary = cctv_service.summarize(cctvs)
 
     # 2) 열람 마감일: 도난 시각 + 최단 보관기간
@@ -65,6 +67,7 @@ def build_evidence_pack(lat: float, lng: float,
             "count": len(cctvs),
             "total_cameras": summary["total_cameras"],
             "radius_m": radius_m,
+            "radius_expanded": found["expanded"],
             "agencies": summary["agencies"],
             "min_retention_days": summary["min_retention_days"],
             "request_deadline": deadline,
@@ -123,5 +126,5 @@ def format_for_pdf(pack: dict) -> list:
         rows.append(["열람 요청 구간", f'{c["request_window"]["from"]} ~ {c["request_window"]["to"]}'])
     if pack["search_areas"]:
         areas = ", ".join(f'{a["area"]}({a["probability"]}%)' for a in pack["search_areas"][:3])
-        rows.append(["우선 수색 지역", areas])
+        rows.append(["모니터링 우선 지역", areas])
     return rows

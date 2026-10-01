@@ -30,6 +30,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # 공공데이터 기반 서비스 모듈
 from services import cctv_service, movement_service, report_service
+# 추적 지원 및 보상 서비스 (시범)
+from services import tracking_service, compensation_pdf
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
@@ -403,6 +405,9 @@ async def startup_event():
     init_db()
     migrate_json_to_sqlite()
 
+    # 추적 지원·보상 테이블 (case_tracking / case_events / case_detections)
+    tracking_service.init(engine)
+
     # CCTV 조회 DB가 없으면 저장소 데이터에서 생성
     # (Render 대시보드 Build Command 설정과 무관하게 동작하도록 보장)
     try:
@@ -413,6 +418,13 @@ async def startup_event():
         print(f"[CCTV DB] 생성 실패 — 공공데이터 조회 비활성: {e}")
 
     scheduler.start()
+
+    # 회수 실패 판정 일괄 점검 (6시간마다) — 기준 충족 사건을 보상 심사 대상으로 자동 전환
+    try:
+        scheduler.add_job(tracking_service.sweep, IntervalTrigger(hours=6),
+                          id="compensation_sweep", replace_existing=True)
+    except Exception as e:
+        print(f"[보상 판정 스케줄] 등록 실패: {e}")
 
     # DB에서 active 케이스 스케줄 복원 (jobstore에 없는 것만)
     with Session(engine) as session:
@@ -654,6 +666,17 @@ async def create_report(request: Request):
     # 스케줄 등록
     reschedule_case(case_id, now)
 
+    # 추적 지원·보상 흐름에도 등록
+    try:
+        tracking_service.start(
+            case_id, theft_at=stolen_info["time"], location=stolen_info["location"],
+            lat=data.get("lat"), lng=data.get("lng"),
+            bike={**{k: stolen_info.get(k, "") for k in ("brand", "model", "color", "price")},
+                  "serial": data.get("serial", "")},
+        )
+    except Exception as e:
+        print(f"[추적] 등록 실패 {case_id}: {e}")
+
     # 검색 쿼리
     query_parts = [stolen_info["brand"], stolen_info["model"], "자전거"]
     query = " ".join(p for p in query_parts if p) or "자전거"
@@ -666,7 +689,8 @@ async def create_report(request: Request):
     all_results = daangn_results + bunjang_results
 
     if not all_results:
-        all_results = MOCK_LISTINGS.copy()
+        # 크롤링 결과가 없을 때 화면 예시용. 사건 기록(DB)에는 저장하지 않는다
+        all_results = [dict(m, is_mock=True) for m in MOCK_LISTINGS]
 
     for listing in all_results:
         if listing["similarity"] == 0:
@@ -675,7 +699,8 @@ async def create_report(request: Request):
         if listing["similarity"] < AI_ESTIMATE_THRESHOLD:
             listing["warning"] = "[주의] AI 추정치 — 실제 도난품 아닐 수 있음. 직접 확인 필수"
 
-    new_findings = [r for r in all_results if r["similarity"] >= SUSPICIOUS_THRESHOLD]
+    new_findings = [r for r in all_results
+                    if r["similarity"] >= SUSPICIOUS_THRESHOLD and not r.get("is_mock")]
     db_append_listings(case_id, new_findings)
 
     with Session(engine) as session:
@@ -721,6 +746,11 @@ async def mark_case_found(case_id: str):
     job_id = f"crawl_{case_id}"
     if scheduler.get_job(job_id):
         scheduler.remove_job(job_id)
+
+    try:
+        tracking_service.mark_recovered(case_id, note="케이스 화면에서 회수 처리")
+    except Exception:
+        pass  # 추적 등록 전 사건
 
     return JSONResponse({"case_id": case_id, "status": "found", "message": "크롤링 중단됨"})
 
@@ -844,52 +874,53 @@ async def _fetch_seoul_cctv(lat: float, lng: float, radius_km: float) -> list:
 
 
 @app.post("/api/cctv/nearby")
-@limiter.limit("30/hour")
+@limiter.limit("120/hour")
 async def get_cctv_nearby(request: Request):
+    """도난 지점 주변 공공 CCTV.
+
+    목업 폴백은 없앤다. 반경 내 0건이면 200→500→1000m로 넓혀 실데이터를 찾고,
+    그래도 없으면 0건을 그대로 응답한다.
+    """
     data = await request.json()
     lat = float(data.get("lat", 37.5665))
     lng = float(data.get("lng", 126.9780))
     radius_m = float(data.get("radius", 200))
-    radius_km = radius_m / 1000.0
 
     cctvs: list = []
-    source = "mock"
+    source = "none"
+    found = {"radius_used": int(radius_m), "expanded": False, "tried": [int(radius_m)]}
 
     # 1순위: 공공데이터 전국 CCTV DB (377,243건)
     if cctv_service.db_available():
-        cctvs = cctv_service.find_nearby(lat, lng, radius_m=radius_m, limit=30)
-        if cctvs:
-            source = "public_data"
-
-    # 2순위: 서울 열린데이터광장 API
-    if not cctvs and PUBLIC_DATA_API_KEY:
-        cctvs = await _fetch_seoul_cctv(lat, lng, radius_km)
-        if cctvs:
-            source = "seoul_api"
-
-    if not cctvs:
-        all_mock = _load_mock_cctvs()
-        for c in all_mock:
-            dist = _haversine_km(lat, lng, c["lat"], c["lng"])
-            if dist <= radius_km:
-                cctvs.append({**c, "distance_m": round(dist * 1000), "source": "mock"})
-
-        if not cctvs:
-            ranked = sorted(all_mock, key=lambda c: _haversine_km(lat, lng, c["lat"], c["lng"]))
-            for c in ranked[:5]:
-                dist = _haversine_km(lat, lng, c["lat"], c["lng"])
-                cctvs.append({**c, "distance_m": round(dist * 1000), "source": "mock_nearest"})
+        found = cctv_service.find_nearby_expanding(lat, lng, radius_m=radius_m, limit=30)
+        cctvs = found["cctvs"]
+        source = "public_data"
+    # 2순위: DB 미적재 시 서울 열린데이터광장 API
+    elif PUBLIC_DATA_API_KEY:
+        cctvs = await _fetch_seoul_cctv(lat, lng, radius_m / 1000.0)
+        source = "seoul_api"
 
     cctvs.sort(key=lambda c: c["distance_m"])
+    notes = {
+        "public_data": "공공데이터포털 「전국 CCTV 표준데이터」 377,243건 기준",
+        "seoul_api": "서울 열린데이터광장 CCTV API 기준",
+        "none": "CCTV 데이터 미적재 — 조회 불가",
+    }
+    note = notes[source]
+    if found.get("expanded"):
+        note += f" · 반경 {int(radius_m)}m 내 0건이라 {found['radius_used']}m로 확대 조회"
 
     return JSONResponse({
         "lat": lat,
         "lng": lng,
         "radius_m": radius_m,
+        "radius_used": found.get("radius_used", int(radius_m)),
+        "expanded": found.get("expanded", False),
+        "tried": found.get("tried", [int(radius_m)]),
         "cctvs": cctvs,
         "total": len(cctvs),
         "source": source,
-        "note": "" if source == "real" else "Mock 데이터. 실제 API: PUBLIC_DATA_API_KEY 환경변수 설정",
+        "note": note,
     })
 
 
@@ -899,7 +930,7 @@ async def get_cctv_access_guide(lat: Optional[float] = None, lng: Optional[float
     """열람 절차 안내. 좌표가 주어지면 관할 기관·보관기간을 반영한다."""
     cctvs = []
     if lat is not None and lng is not None and cctv_service.db_available():
-        cctvs = cctv_service.find_nearby(float(lat), float(lng), radius_m=radius, limit=20)
+        cctvs = cctv_service.find_nearby_expanding(float(lat), float(lng), radius_m=radius, limit=20)["cctvs"]
     return JSONResponse(cctv_service.access_guide(cctvs))
 
 
@@ -998,27 +1029,24 @@ async def police_nearby(lat: float = 37.5665, lng: float = 126.9780, limit: int 
         result.append({**s, "distance_km": round(dist, 1)})
     return JSONResponse({
         "nearest_stations": result,
+        # 자전거 도난은 온라인 접수 창구가 없다. 112 또는 경찰관서 방문 신고.
+        # (출처: 양천구청 '도난자전거 신고방법' bike.yangcheon.go.kr/bike-news/lost-info)
+        # 이전 버전의 safe182.go.kr 은 실종자 찾기 사이트라 제거함
         "online_report": {
-            "safe182": {
-                "name": "안전Dream 분실·도난 신고",
-                "url": "https://www.safe182.go.kr",
-                "desc": "경찰청 공식 온라인 도난 신고 (회원가입 후 접수)",
-                "steps": [
-                    "1. safe182.go.kr 접속",
-                    "2. [민원신청] → [분실·습득물 신고]",
-                    "3. 물품 정보 입력 (모델·시리얼·사진 첨부)",
-                    "4. 접수 완료 → 사건번호 발급",
-                ],
-            },
-            "epolice": {
-                "name": "경찰청 민원포털",
-                "url": "https://minwon.police.go.kr",
-                "desc": "각종 민원 온라인 접수",
-            },
             "direct_112": {
-                "name": "112 긴급신고",
-                "desc": "도난 직후 즉시 → 112 전화가 가장 빠름",
+                "name": "112 신고",
+                "desc": "도난 직후 112 전화 신고 → 출동 경찰관에게 진술",
             },
+            "visit": {
+                "name": "경찰관서 방문 신고",
+                "desc": "가까운 경찰서·지구대·파출소 방문. 도난 시간대·차대번호·사진 지참",
+            },
+            "lost112": {
+                "name": "LOST112 습득물 조회",
+                "url": "https://www.lost112.go.kr",
+                "desc": "경찰관서·지하철 등에 보관 중인 습득 자전거 조회",
+            },
+            "source": "양천구청 도난자전거 신고방법 (https://bike.yangcheon.go.kr/bike-news/lost-info)",
         },
     })
 
@@ -1103,13 +1131,31 @@ def _build_112_pdf(data: dict) -> bytes:
     ], [45 * mm, 125 * mm]))
     story.append(Spacer(1, 4 * mm))
 
-    story.append(Paragraph("■ AI 도난탐정 분석 결과", S["section"]))
-    story.append(Paragraph(
-        f"스캔 플랫폼: 당근마켓·번개장터·중고나라  |  "
-        f"의심 매물: {data.get('suspicious_count', len(suspicious))}건  |  "
-        f"최고 유사도: {data.get('max_similarity', 0)}%",
-        S["body"],
-    ))
+    # ■ 피해 물품 사진 (최대 3장, 사업계획서 '사진 자동 패키징')
+    photo_cells = _decode_photos(data.get("photos") or [])
+    if photo_cells:
+        story.append(Paragraph(f"■ 피해 물품 사진 ({len(photo_cells)}장)", S["section"]))
+        pt = Table([photo_cells], colWidths=[56 * mm] * len(photo_cells))
+        pt.setStyle(TableStyle([
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("BOX", (0, 0), (-1, -1), 0.4, colors.HexColor("#cccccc")),
+            ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#cccccc")),
+        ]))
+        story.append(pt)
+        story.append(Spacer(1, 4 * mm))
+
+    story.append(Paragraph("■ 중고마켓 탐지 결과", S["section"]))
+    platforms = sorted({l.get("platform") for l in listings if l.get("platform")})
+    if listings:
+        story.append(Paragraph(
+            f"탐지 플랫폼: {'·'.join(platforms) or '-'}  |  "
+            f"의심 매물: {data.get('suspicious_count', len(suspicious))}건  |  "
+            f"최고 유사도: {data.get('max_similarity', 0)}% (추정치)",
+            S["body"],
+        ))
+    else:
+        story.append(Paragraph("신고 시점 의심 매물 없음 — 중고마켓 모니터링 진행 중", S["body"]))
 
     if suspicious:
         story.append(Spacer(1, 2 * mm))
@@ -1150,9 +1196,45 @@ def _build_112_pdf(data: dict) -> bytes:
         ))
         story.append(Spacer(1, 4 * mm))
 
-    story.append(Paragraph("■ 관할 경찰서", S["section"]))
-    story.append(Paragraph(get_nearest_police(stolen.get("location", "")), S["body"]))
-    story.append(Paragraph("온라인 접수: https://www.safe182.go.kr  |  긴급: 112", S["body"]))
+    # ■ 증거 확보 정보 (도난 좌표가 있으면 자동 산출)
+    lat, lng = data.get("lat"), data.get("lng")
+    if lat is not None and lng is not None:
+        try:
+            pack = report_service.build_evidence_pack(
+                float(lat), float(lng), stolen_time=stolen.get("time"), radius_m=int(data.get("radius", 200)))
+        except Exception:
+            pack = None
+        if pack:
+            c = pack["cctv"]
+            story.append(Paragraph("■ 증거 확보 정보 (공공데이터 기반 자동 산출)", S["section"]))
+            story.append(_table([[k, v] for k, v in report_service.format_for_pdf(pack)], [45 * mm, 125 * mm]))
+            ags = c.get("agencies") or []
+            if ags:
+                story.append(Spacer(1, 2 * mm))
+                at = Table([["CCTV 관리기관", "연락처", "보유", "최단거리"]] +
+                           [[a["agency"][:24], a.get("tel") or "-", f"{a['count']}개소", f"{a['nearest_m']}m"]
+                            for a in ags[:4]],
+                           colWidths=[70 * mm, 40 * mm, 28 * mm, 32 * mm])
+                at.setStyle(TableStyle([
+                    ("FONTNAME", (0, 0), (-1, -1), PDF_FONT), ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a1a2e")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#cccccc")),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ]))
+                story.append(at)
+            story.append(Paragraph("출처: 공공데이터포털 「전국 CCTV 표준데이터」. 열람은 사건 접수 후 수사관을 통해 요청",
+                                   S["warn"]))
+            story.append(Spacer(1, 4 * mm))
+
+    story.append(Paragraph("■ 신고 방법", S["section"]))
+    station = _nearest_station_text(lat, lng) if lat is not None and lng is not None else \
+        get_nearest_police(stolen.get("location", ""))
+    story.append(Paragraph(f"가까운 경찰관서: {station}", S["body"]))
+    story.append(Paragraph("접수: 112 전화 신고 또는 가까운 경찰서·지구대·파출소 방문 신고 "
+                           "(도난 시간대·차대번호·사진 지참)", S["body"]))
+    story.append(Paragraph("습득 자전거 조회: LOST112 (www.lost112.go.kr)  |  "
+                           "출처: 양천구청 ‘도난자전거 신고방법’", S["body"]))
     story.append(Spacer(1, 6 * mm))
 
     story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#cccccc"), spaceAfter=4))
@@ -1172,8 +1254,42 @@ def _build_112_pdf(data: dict) -> bytes:
     return buf.getvalue()
 
 
+def _decode_photos(photos: list) -> list:
+    """data URL(base64) 사진 최대 3장 → reportlab Image 셀. 장당 6MB 초과·해석 불가는 건너뜀"""
+    import base64
+    from reportlab.platypus import Image as RLImage
+    from reportlab.lib.utils import ImageReader
+    cells = []
+    for p in photos[:3]:
+        try:
+            b64 = p.split(",", 1)[1] if isinstance(p, str) and p.startswith("data:") else p
+            raw = base64.b64decode(b64)
+            if len(raw) > 6 * 1024 * 1024:
+                continue
+            iw, ih = ImageReader(io.BytesIO(raw)).getSize()
+            w = 52 * mm
+            h = min(w * ih / iw, 60 * mm)
+            w = h * iw / ih if h < w * ih / iw else w
+            cells.append(RLImage(io.BytesIO(raw), width=w, height=h))
+        except Exception:
+            continue
+    return cells
+
+
+def _nearest_station_text(lat, lng) -> str:
+    try:
+        lat, lng = float(lat), float(lng)
+    except (TypeError, ValueError):
+        return "관할 경찰서 확인 필요 (112)"
+    s = min(POLICE_STATIONS, key=lambda x: _haversine_km(lat, lng, x["lat"], x["lng"]))
+    d = _haversine_km(lat, lng, s["lat"], s["lng"])
+    if d > 5:
+        return "관할 경찰서 확인 필요 — 112 신고 시 자동 배정"
+    return f"{s['name']} ({s['phone']}, 약 {d:.1f}km)"
+
+
 @app.post("/api/report/112-form")
-@limiter.limit("5/hour")
+@limiter.limit("30/hour")
 async def generate_112_pdf(request: Request):
     from urllib.parse import quote
     data = await request.json()
@@ -1210,7 +1326,7 @@ async def predict_movement(request: Request):
 
 
 @app.post("/api/evidence-pack")
-@limiter.limit("20/hour")
+@limiter.limit("120/hour")
 async def evidence_pack(request: Request):
     """도난 좌표 기준 CCTV·수색지역·체크리스트를 한 번에 생성 (신고 자동화)"""
     data = await request.json()
@@ -1225,6 +1341,146 @@ async def evidence_pack(request: Request):
         radius_m=int(data.get("radius", 200)),
     )
     return JSONResponse(pack)
+
+
+# ============================================================
+# 추적 지원 및 보상 서비스 (시범)
+#   사건 상태: 신고 접수 → 탐색 중 → 회수 / 회수 실패 판정 → 보상 심사 → 확정·반려
+#   탐지·매칭 로직과 등록번호 발급은 여기 없다 (외부 엔진 결과를 받는 자리만 둠)
+# ============================================================
+def _track_call(fn, *args, **kwargs):
+    try:
+        return JSONResponse(fn(*args, **kwargs))
+    except KeyError as e:
+        return JSONResponse({"error": str(e).strip("'")}, status_code=404)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+
+@app.post("/api/track/start")
+@limiter.limit("60/hour")
+async def track_start(request: Request):
+    """도난 사건 등록 + 추적 시작 (크롤링은 하지 않음. 탐지는 외부 엔진 결과 수신)"""
+    d = await request.json()
+    now = datetime.now()
+    case_id = f"ATD-{now.strftime('%Y%m%d%H%M%S')}{random.randint(10, 99)}"
+    with Session(engine) as session:
+        session.add(Case(
+            case_id=case_id, model=d.get("model", ""), brand=d.get("brand", ""),
+            color=d.get("color", ""), serial=d.get("serial", ""), location=d.get("location", ""),
+            lat=d.get("lat"), lng=d.get("lng"), price=d.get("price", ""), features=d.get("features", ""),
+            time=d.get("theft_at", ""), reported_at=now, status="active",
+            crawl_interval_minutes=15, unread_count=0,
+        ))
+        session.commit()
+    bike = {k: d.get(k, "") for k in ("brand", "model", "color", "serial", "price", "features")}
+    return _track_call(tracking_service.start, case_id, theft_at=d.get("theft_at"),
+                       location=d.get("location", ""), lat=d.get("lat"), lng=d.get("lng"), bike=bike)
+
+
+@app.get("/api/track/{case_id}")
+async def track_get(case_id: str):
+    return _track_call(tracking_service.bundle, case_id)
+
+
+@app.post("/api/track/{case_id}/police")
+async def track_police(case_id: str, request: Request):
+    d = await request.json()
+    return _track_call(tracking_service.set_police, case_id, d.get("report_no", ""),
+                       d.get("station", ""), d.get("reported_at"))
+
+
+@app.post("/api/track/{case_id}/registration")
+async def track_registration(case_id: str, request: Request):
+    """등록원부 고유번호 수신 자리 (번호 발급은 외부 등록원부가 담당)"""
+    d = await request.json()
+    return _track_call(tracking_service.set_registration, case_id, d.get("registration_no", ""),
+                       source=d.get("source", "registry"))
+
+
+@app.post("/api/track/{case_id}/detections")
+@limiter.limit("60/hour")
+async def track_detections(case_id: str, request: Request):
+    """외부 중고마켓 감시 엔진의 탐지 결과 수신 자리"""
+    d = await request.json()
+    return _track_call(tracking_service.add_detections, case_id, d.get("items") or [],
+                       source=str(d.get("source", "marketplace-engine")))
+
+
+@app.post("/api/track/{case_id}/detections/{det_id}")
+async def track_detection_status(case_id: str, det_id: int, request: Request):
+    d = await request.json()
+    return _track_call(tracking_service.set_detection_status, case_id, det_id, d.get("status", ""))
+
+
+@app.post("/api/track/{case_id}/recovered")
+async def track_recovered(case_id: str, request: Request):
+    d = await request.json()
+    try:
+        with Session(engine) as session:
+            c = db_get_case(session, case_id)
+            if c:
+                c.status, c.found_at = "found", datetime.now()
+                session.commit()
+        if scheduler.get_job(f"crawl_{case_id}"):
+            scheduler.remove_job(f"crawl_{case_id}")
+    except Exception:
+        pass
+    return _track_call(tracking_service.mark_recovered, case_id, d.get("note", ""))
+
+
+@app.post("/api/track/{case_id}/verification")
+async def track_verification(case_id: str, request: Request):
+    """도난 입증 판정 결과 수신 자리 (허위 신고 방지 — 판정 로직은 외부 모듈)"""
+    d = await request.json()
+    return _track_call(tracking_service.set_verification, case_id, d.get("verdict", ""),
+                       d.get("confidence"), d.get("evidence"), source=d.get("source", "verifier"))
+
+
+@app.get("/api/track/{case_id}/eligibility")
+async def track_eligibility(case_id: str, as_of: Optional[str] = None):
+    """회수 실패 판정 기준 점검. as_of 는 미리보기로 상태를 바꾸지 않는다"""
+    return _track_call(tracking_service.evaluate, case_id, as_of)
+
+
+@app.post("/api/track/{case_id}/evaluate")
+async def track_evaluate(case_id: str):
+    """현재 시각 기준 판정. 충족 시 회수 실패 판정 → 보상 심사 대상 자동 전환"""
+    return _track_call(tracking_service.apply_evaluation, case_id)
+
+
+@app.post("/api/track/{case_id}/decision")
+async def track_decision(case_id: str, request: Request):
+    d = await request.json()
+    return _track_call(tracking_service.decide, case_id, d.get("decision", ""), d.get("note", ""))
+
+
+@app.get("/api/track/{case_id}/compensation-pack")
+@limiter.limit("30/hour")
+async def track_compensation_pack(case_id: str, request: Request):
+    """보상 신청 패키지 PDF (사건 요약·112 신고·회수 실패 판정·추적 이력·증거·제출 서류)"""
+    from urllib.parse import quote
+    try:
+        b = tracking_service.bundle(case_id)
+    except KeyError:
+        return JSONResponse({"error": "추적 정보가 없는 사건입니다"}, status_code=404)
+    evidence = None
+    if b.get("lat") is not None and b.get("lng") is not None:
+        try:
+            evidence = report_service.build_evidence_pack(float(b["lat"]), float(b["lng"]),
+                                                          stolen_time=b.get("theft_at"))
+        except Exception:
+            evidence = None
+    pdf = compensation_pdf.build(b, evidence)
+    fn = quote(f"보상신청패키지_{case_id}.pdf", safe="")
+    return StreamingResponse(io.BytesIO(pdf), media_type="application/pdf",
+                             headers={"Content-Disposition": f"attachment; filename*=UTF-8''{fn}"})
+
+
+@app.post("/api/track/sweep")
+async def track_sweep():
+    """진행 중 사건 일괄 판정 (스케줄러가 6시간마다 실행)"""
+    return JSONResponse(tracking_service.sweep())
 
 
 # ============================================================
@@ -1380,6 +1636,14 @@ async def privacy():
 @app.get("/terms", response_class=HTMLResponse)
 async def terms():
     _path = os.path.join(os.path.dirname(__file__), "public", "terms.html")
+    with open(_path, "r", encoding="utf-8") as f:
+        return f.read()
+
+
+@app.get("/service", response_class=HTMLResponse)
+async def service_page():
+    """도난 대응 서비스 화면 — 위치 입력 → CCTV 지도 → 모니터링 지역 → 112 신고서 → 추적·보상"""
+    _path = os.path.join(os.path.dirname(__file__), "public", "service.html")
     with open(_path, "r", encoding="utf-8") as f:
         return f.read()
 
