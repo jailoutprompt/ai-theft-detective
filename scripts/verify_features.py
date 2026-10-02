@@ -335,6 +335,14 @@ def t5_report_pdf():
     _, _, pdf2 = raw("/api/report/112-form", body2)
     check("좌표 있을 때 증거팩 섹션이 추가됨 (문서 분량 증가)",
           len(pdf) > len(pdf2) and b"safe182" not in pdf, f"좌표 O {len(pdf):,}B / 좌표 X {len(pdf2):,}B")
+    # 5-x. 신고 준비서 개편 (2026-10-02): 좌표가 있으면 지도 이미지가 사진과 별도로 들어간다
+    body3 = dict(body, photos=photos[:1])
+    _, _, pdf3 = raw("/api/report/112-form", body3)
+    n3 = len(re.findall(rb"/Subtype\s*/Image", pdf3))
+    check("좌표 있으면 사진 1장 + 지도 이미지 포함 (이미지 2개 이상)", n3 >= 2, f"이미지 {n3}개")
+    _, _, pdf4 = raw("/api/report/112-form", dict(body2, photos=photos[:1]))
+    n4 = len(re.findall(rb"/Subtype\s*/Image", pdf4))
+    check("좌표 없으면 지도 없이 사진만 (이미지 1개)", n4 == 1, f"이미지 {n4}개")
     _, pn = jcall("/api/police/nearby?lat=37.4979&lng=127.0276")
     ors = pn.get("online_report", {})
     check("신고 경로에서 실종자 사이트(safe182) 제거, 출처 명시",

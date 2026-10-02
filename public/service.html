@@ -335,7 +335,10 @@ function renderChips(){
 }
 $('f-time').value = toLocalInput(new Date(Date.now()-2*3600e3));
 $('btn-sample').onclick = ()=>{
-  $('f-brand').value='삼천리'; $('f-model').value='팬텀 Q'; $('f-color').value='무광 블랙'; $('f-serial').value='WSBC4012345678';
+  $('f-brand').value='삼천리'; $('f-model').value='팬텀 Q'; $('f-color').value='무광 블랙'; $('f-serial').value='SCF2508K17342';
+  $('f-name').value='김도윤'; $('f-phone').value='010-3921-7740';
+  if(!S.photos.length){ fetch('/demo-bike.jpg').then(r=>r.blob()).then(b=>new Promise(res=>{const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(b);}))
+    .then(u=>{ S.photos=[u]; $('photo-thumbs').innerHTML=`<img src="${u}">`; }).catch(e=>toast('예시 사진 불러오기 실패: '+e.message)); }
   const l = LOCS.find(x=>Math.abs(x.lat-S.lat)<1e-6) || LOCS[0]; $('f-place').value = l.place;
   $('f-time').value = toLocalInput(new Date(Date.now()-36*864e5));
   const pd = new Date(Date.now()-35*864e5);

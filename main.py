@@ -1058,203 +1058,274 @@ async def police_nearby(lat: float = 37.5665, lng: float = 126.9780, limit: int 
 # PDF 생성 헬퍼
 # ============================================================
 def _build_112_pdf(data: dict) -> bytes:
+    """자전거 도난 신고 준비서 (112 신고·경찰서 방문 시 보여주는 정리본)
+
+    경찰 공식 서식이 아니다. 경찰이 실제로 묻는 것(도난 시간대·차대번호·사진)과
+    피해자가 지금 해야 할 일(신고처·CCTV 보존 기한)을 1쪽에 모은다.
+    값이 없는 항목은 '-'로 찍지 않고 줄째로 뺀다.
+    """
+    from reportlab.platypus import Image as RLImage, KeepTogether
+
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buf,
-        pagesize=A4,
-        leftMargin=20 * mm,
-        rightMargin=20 * mm,
-        topMargin=20 * mm,
-        bottomMargin=20 * mm,
-    )
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm,
+                            topMargin=13 * mm, bottomMargin=24 * mm,
+                            title="자전거 도난 신고 준비서", author="AI 도난탐정")
+    INK, SUB, LINE = colors.HexColor("#111827"), colors.HexColor("#6B7280"), colors.HexColor("#E5E7EB")
+    RED, IND = colors.HexColor("#DC2626"), colors.HexColor("#4F46E5")
+    W = doc.width - 12  # Frame 기본 안쪽 여백(좌우 6pt)을 빼야 표가 본문 글과 같은 선에 선다
 
-    S = {
-        "title":   ParagraphStyle("title",   fontName=PDF_FONT, fontSize=16, spaceAfter=4,  leading=22, alignment=1),
-        "subtitle":ParagraphStyle("subtitle",fontName=PDF_FONT, fontSize=10, spaceAfter=10, textColor=colors.grey, alignment=1),
-        "section": ParagraphStyle("section", fontName=PDF_FONT, fontSize=11, spaceAfter=4,  spaceBefore=8, textColor=colors.HexColor("#1a1a2e")),
-        "body":    ParagraphStyle("body",    fontName=PDF_FONT, fontSize=9,  spaceAfter=3,  leading=14),
-        "warn":    ParagraphStyle("warn",    fontName=PDF_FONT, fontSize=8,  textColor=colors.HexColor("#cc4444"), leading=12),
-        "footer":  ParagraphStyle("footer",  fontName=PDF_FONT, fontSize=8,  textColor=colors.grey, alignment=1),
-    }
+    def P(text, size=9, color=INK, lead=None, align=0, space=0):
+        return Paragraph(text, ParagraphStyle(
+            "p", fontName=PDF_FONT, fontSize=size, leading=lead or size * 1.45,
+            textColor=color, alignment=align, spaceAfter=space))
 
-    def _table(rows, col_widths):
-        t = Table(rows, colWidths=col_widths)
-        t.setStyle(TableStyle([
-            ("FONTNAME",      (0, 0), (-1, -1), PDF_FONT),
-            ("FONTSIZE",      (0, 0), (-1, -1), 9),
-            ("BACKGROUND",    (0, 0), (0, -1),  colors.HexColor("#f0f0f8")),
-            ("GRID",          (0, 0), (-1, -1), 0.4, colors.HexColor("#cccccc")),
-            ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 5),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
-            ("TOPPADDING",    (0, 0), (-1, -1), 3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ]))
-        return t
+    def section(title):
+        return [Spacer(1, 4.5 * mm), P(title, 11, INK, space=1.5 * mm),
+                HRFlowable(width="100%", thickness=0.6, color=INK, spaceAfter=2 * mm)]
 
-    stolen   = data.get("stolen_info", {})
-    reporter = data.get("reporter", {})
-    now      = datetime.now()
-    report_id = data.get("report_id", f"ATD-{now.strftime('%Y%m%d%H%M%S')}")
-    listings  = data.get("scan_results", [])
+    def clean(v):
+        v = (str(v).strip() if v is not None else "")
+        return "" if v in ("-", "None") else v
+
+    stolen = data.get("stolen_info", {}) or {}
+    reporter = data.get("reporter", {}) or {}
+    now = datetime.now()
+    report_id = data.get("report_id") or f"ATD-{now.strftime('%Y%m%d%H%M%S')}"
+    listings = data.get("scan_results", []) or []
     suspicious = [l for l in listings if l.get("similarity", 0) >= SUSPICIOUS_THRESHOLD]
-
-    story = []
-
-    story.append(Paragraph("자전거 도난 신고서", S["title"]))
-    story.append(Paragraph("AI 도난탐정 자동 생성  |  주식회사 무무익선", S["subtitle"]))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#1a1a2e"), spaceAfter=6))
-
-    story.append(Paragraph("■ 신고 기본 정보", S["section"]))
-    story.append(_table([
-        ["신고 일시", now.strftime("%Y년 %m월 %d일 %H시 %M분")],
-        ["사건 번호", report_id],
-        ["도난 일시", stolen.get("time", "-")],
-        ["도난 장소", stolen.get("location", "-")],
-    ], [45 * mm, 125 * mm]))
-    story.append(Spacer(1, 4 * mm))
-
-    story.append(Paragraph("■ 피해 물품 정보", S["section"]))
-    story.append(_table([
-        ["제조사",      stolen.get("brand", "-")],
-        ["모델명",      stolen.get("model", "-")],
-        ["색상",        stolen.get("color", "-")],
-        ["시리얼 번호", stolen.get("serial", "-")],
-        ["구입 가격",   stolen.get("price", "-")],
-        ["특이사항",    stolen.get("features", "-")],
-    ], [45 * mm, 125 * mm]))
-    story.append(Spacer(1, 4 * mm))
-
-    story.append(Paragraph("■ 신고인 정보", S["section"]))
-    story.append(_table([
-        ["성명",            reporter.get("name", "-")],
-        ["연락처",          reporter.get("phone", "-")],
-        ["주소",            reporter.get("address", "-")],
-        ["주민번호 앞자리", reporter.get("id_partial", "-")],
-    ], [45 * mm, 125 * mm]))
-    story.append(Spacer(1, 4 * mm))
-
-    # ■ 피해 물품 사진 (최대 3장, 사업계획서 '사진 자동 패키징')
-    photo_cells = _decode_photos(data.get("photos") or [])
-    if photo_cells:
-        story.append(Paragraph(f"■ 피해 물품 사진 ({len(photo_cells)}장)", S["section"]))
-        pt = Table([photo_cells], colWidths=[56 * mm] * len(photo_cells))
-        pt.setStyle(TableStyle([
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("BOX", (0, 0), (-1, -1), 0.4, colors.HexColor("#cccccc")),
-            ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#cccccc")),
-        ]))
-        story.append(pt)
-        story.append(Spacer(1, 4 * mm))
-
-    story.append(Paragraph("■ 중고마켓 탐지 결과", S["section"]))
-    platforms = sorted({l.get("platform") for l in listings if l.get("platform")})
-    if listings:
-        story.append(Paragraph(
-            f"탐지 플랫폼: {'·'.join(platforms) or '-'}  |  "
-            f"의심 매물: {data.get('suspicious_count', len(suspicious))}건  |  "
-            f"최고 유사도: {data.get('max_similarity', 0)}% (추정치)",
-            S["body"],
-        ))
-    else:
-        story.append(Paragraph("신고 시점 의심 매물 없음 — 중고마켓 모니터링 진행 중", S["body"]))
-
-    if suspicious:
-        story.append(Spacer(1, 2 * mm))
-        susp_header = [["플랫폼", "제목", "가격", "지역", "유사도"]]
-        susp_rows = [
-            [
-                l.get("platform", "-"),
-                l.get("title", "-")[:22],
-                l.get("price", "-"),
-                l.get("location", "-"),
-                f"{l.get('similarity', 0)}%",
-            ]
-            for l in suspicious[:5]
-        ]
-        t = Table(susp_header + susp_rows, colWidths=[24 * mm, 62 * mm, 22 * mm, 26 * mm, 16 * mm])
-        t.setStyle(TableStyle([
-            ("FONTNAME",      (0, 0), (-1, -1), PDF_FONT),
-            ("FONTSIZE",      (0, 0), (-1, -1), 8),
-            ("BACKGROUND",    (0, 0), (-1, 0),  colors.HexColor("#1a1a2e")),
-            ("TEXTCOLOR",     (0, 0), (-1, 0),  colors.white),
-            ("BACKGROUND",    (0, 1), (-1, -1), colors.HexColor("#fff8f0")),
-            ("GRID",          (0, 0), (-1, -1), 0.4, colors.HexColor("#cccccc")),
-            ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 4),
-            ("TOPPADDING",    (0, 0), (-1, -1), 3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ]))
-        story.append(t)
-    story.append(Spacer(1, 4 * mm))
-
-    gps = data.get("last_gps")
-    if gps:
-        story.append(Paragraph("■ GPS 마지막 확인 위치", S["section"]))
-        story.append(Paragraph(
-            f"위도 {gps.get('lat', '-')} / 경도 {gps.get('lng', '-')}  "
-            f"({gps.get('address', '주소 미확인')}) — {gps.get('time', '-')}",
-            S["body"],
-        ))
-        story.append(Spacer(1, 4 * mm))
-
-    # ■ 증거 확보 정보 (도난 좌표가 있으면 자동 산출)
     lat, lng = data.get("lat"), data.get("lng")
+
+    pack = None
     if lat is not None and lng is not None:
         try:
             pack = report_service.build_evidence_pack(
                 float(lat), float(lng), stolen_time=stolen.get("time"), radius_m=int(data.get("radius", 200)))
-        except Exception:
+        except Exception as e:  # noqa: BLE001
+            print(f"[112-pdf] 증거팩 생성 실패: {e!r}")
             pack = None
-        if pack:
-            c = pack["cctv"]
-            story.append(Paragraph("■ 증거 확보 정보 (공공데이터 기반 자동 산출)", S["section"]))
-            story.append(_table([[k, v] for k, v in report_service.format_for_pdf(pack)], [45 * mm, 125 * mm]))
-            ags = c.get("agencies") or []
-            if ags:
-                story.append(Spacer(1, 2 * mm))
-                at = Table([["CCTV 관리기관", "연락처", "보유", "최단거리"]] +
-                           [[a["agency"][:24], a.get("tel") or "-", f"{a['count']}개소", f"{a['nearest_m']}m"]
-                            for a in ags[:4]],
-                           colWidths=[70 * mm, 40 * mm, 28 * mm, 32 * mm])
-                at.setStyle(TableStyle([
-                    ("FONTNAME", (0, 0), (-1, -1), PDF_FONT), ("FONTSIZE", (0, 0), (-1, -1), 8),
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a1a2e")),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                    ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#cccccc")),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                ]))
-                story.append(at)
-            story.append(Paragraph("출처: 공공데이터포털 「전국 CCTV 표준데이터」. 열람은 사건 접수 후 수사관을 통해 요청",
-                                   S["warn"]))
-            story.append(Spacer(1, 4 * mm))
 
-    story.append(Paragraph("■ 신고 방법", S["section"]))
+    story = []
+
+    # ── 머리말
+    head = Table([[P("자전거 도난 신고 준비서", 19, INK, lead=24),
+                   P(f"사건번호 {report_id}<br/>작성 {now.strftime('%Y-%m-%d %H:%M')}", 8.5, SUB, align=2)]],
+                 colWidths=[W * 0.65, W * 0.35])
+    head.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
+                              ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0)]))
+    story += [head, Spacer(1, 1.5 * mm),
+              P("112 신고 또는 경찰서 방문 시 이 문서를 보여주세요. 경찰 공식 서식이 아닌 신고 준비 자료입니다.", 9, SUB),
+              HRFlowable(width="100%", thickness=1.4, color=INK, spaceBefore=2.5 * mm, spaceAfter=4 * mm)]
+
+    # ── 핵심 카드: 사진 + 경찰이 묻는 것
+    photos = _photo_bytes(data.get("photos") or [])
+    PW = 70 * mm
+    if photos:
+        raw0, iw, ih = photos[0]
+        ph = min(PW * ih / iw, 64 * mm)
+        pcell = [RLImage(io.BytesIO(raw0), width=ph * iw / ih, height=ph)]
+        if len(photos) > 1:
+            th = []
+            for raw, w_, h_ in photos[1:3]:
+                tw = (PW - 2 * mm) / 2
+                tht = min(tw * h_ / w_, 30 * mm)
+                th.append(RLImage(io.BytesIO(raw), width=tht * w_ / h_, height=tht))
+            tt = Table([th], colWidths=[PW / 2] * len(th))
+            tt.setStyle(TableStyle([("LEFTPADDING", (0, 0), (-1, -1), 0), ("TOPPADDING", (0, 0), (-1, -1), 2 * mm)]))
+            pcell.append(tt)
+        pcell.append(P(f"피해 자전거 사진 {len(photos)}장", 7.5, SUB, align=1))
+    else:
+        pcell = [P("사진 없음<br/>신고 시 자전거 사진을 함께 준비하세요", 9, SUB, align=1)]
+
+    t_raw = clean(stolen.get("time"))
+    t0 = report_service._parse_time(t_raw) if t_raw else None
+    when = (f"{t0.strftime('%Y-%m-%d %H:%M')} 전후" if t0 else (t_raw or "확인 필요"))
+    window = ""
+    if pack and pack["cctv"].get("request_window"):
+        w = pack["cctv"]["request_window"]
+        window = f"CCTV 확인 구간 {w['from'][11:]} ~ {w['to'][11:]}"
+    bike = " ".join(x for x in [clean(stolen.get("brand")), clean(stolen.get("model"))] if x)
+    color = clean(stolen.get("color"))
+    serial = clean(stolen.get("serial"))
+
+    def key(label, value, size=13, vcolor=INK, sub=""):
+        out = [P(label, 8, SUB, space=0.6 * mm), P(value, size, vcolor, lead=size * 1.3)]
+        if sub:
+            out.append(P(sub, 8, SUB))
+        out.append(Spacer(1, 3.2 * mm))
+        return out
+
+    info = []
+    info += key("도난 시간대", when, 14, sub=window)
+    info += key("차대번호 (프레임 각인)", serial or "미기재 — 프레임 하단 각인 확인 필요", 15 if serial else 10,
+                INK if serial else RED)
+    if bike or color:
+        info += key("자전거", " · ".join(x for x in [bike, color] if x), 12)
+    if clean(stolen.get("location")):
+        info += key("도난 장소", clean(stolen.get("location")), 11,
+                    sub=(f"좌표 {float(lat):.5f}, {float(lng):.5f}" if lat is not None and lng is not None else ""))
+    gps = data.get("last_gps")
+    if gps and gps.get("lat") is not None:
+        info += key("뇌울림 GPS 마지막 위치", f"{gps.get('lat')}, {gps.get('lng')}", 10,
+                    sub=" · ".join(x for x in [clean(gps.get("address")), clean(gps.get("time"))] if x))
+    extra = [(k, clean(stolen.get(f))) for k, f in (("구입 가격", "price"), ("특이사항", "features"))]
+    extra = [(k, v) for k, v in extra if v]
+    for k, v in extra:
+        info += key(k, v, 10)
+
+    card = Table([[pcell, info]], colWidths=[PW + 6 * mm, W - PW - 6 * mm])
+    card.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+                              ("LEFTPADDING", (0, 0), (0, 0), 0), ("LEFTPADDING", (1, 0), (1, 0), 4 * mm),
+                              ("LINEBEFORE", (1, 0), (1, 0), 0.6, LINE)]))
+    story.append(card)
+
+    # ── 지도 + 지금 할 일
     station = _nearest_station_text(lat, lng) if lat is not None and lng is not None else \
         get_nearest_police(stolen.get("location", ""))
-    story.append(Paragraph(f"가까운 경찰관서: {station}", S["body"]))
-    story.append(Paragraph("접수: 112 전화 신고 또는 가까운 경찰서·지구대·파출소 방문 신고 "
-                           "(도난 시간대·차대번호·사진 지참)", S["body"]))
-    story.append(Paragraph("습득 자전거 조회: LOST112 (www.lost112.go.kr)  |  "
-                           "출처: 양천구청 ‘도난자전거 신고방법’", S["body"]))
-    story.append(Spacer(1, 6 * mm))
+    todo = []
+    todo.append(("신고", f"112 전화 또는 경찰관서 방문<br/><font color='#4F46E5'>{station}</font>", INK))
+    if pack:
+        c = pack["cctv"]
+        ags = c.get("agencies") or []
+        ag_txt = " · ".join(f"{a['agency'][:14]} {a.get('tel') or ''}".strip() for a in ags[:2])
+        dl = c.get("days_left")
+        if c.get("request_deadline"):
+            if dl is None or dl > 7:
+                due, dcol = f"{c['request_deadline']}까지 (잔여 {dl}일)", INK
+            elif dl > 0:
+                due, dcol = f"{c['request_deadline']}까지 — 잔여 {dl}일, 서두르세요", RED
+            elif dl == 0:
+                due, dcol = "오늘 마감", RED
+            else:
+                due, dcol = f"보관기간 {-dl}일 경과 — 영상 남아 있는지 즉시 문의", RED
+            todo.append(("CCTV 영상 보존 요청", f"<font color='{dcol.hexval().replace('0x', '#')}'>{due}</font>"
+                                               f"<br/>{ag_txt}", INK))
+        elif c.get("count") == 0:
+            todo.append(("CCTV", "반경 1km 내 공공 CCTV 없음 — 주변 상가·아파트 CCTV 직접 확인", INK))
+    todo.append(("접수번호 받기", "앱 「추적 현황」에 입력 — 회수 실패 판정·보상 신청에 필요", INK))
+    todo.append(("습득 자전거 조회", "LOST112 (www.lost112.go.kr)", INK))
+    todo_rows = []
+    for i, (t, d_, _) in enumerate(todo, 1):
+        todo_rows.append([P(f"{i}", 12, IND, align=1), [P(t, 10, INK, space=0.5 * mm), P(d_, 8.5, SUB)]])
+    tbox = Table(todo_rows, colWidths=[8 * mm, None])
+    tbox.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+                              ("LEFTPADDING", (0, 0), (-1, -1), 1), ("BOTTOMPADDING", (0, 0), (-1, -1), 2.6 * mm),
+                              ("LINEBELOW", (0, 0), (-1, -2), 0.4, LINE)]))
+    todo_block = [P("지금 할 일", 11, INK, space=2 * mm), tbox]
 
-    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#cccccc"), spaceAfter=4))
-    story.append(Paragraph(
-        "본 신고서는 AI 도난탐정이 자동 생성한 참고 자료입니다. "
-        "AI 분석 결과는 추정치이며 법적 효력이 없습니다. "
-        "중고 매물이 실제 도난품임을 단정하지 마시고, 반드시 경찰에 신고 후 판단하세요.",
-        S["warn"],
-    ))
-    story.append(Spacer(1, 3 * mm))
-    story.append(Paragraph(
-        f"생성일시: {now.strftime('%Y-%m-%d %H:%M:%S')}  |  주식회사 무무익선 AI 도난탐정",
-        S["footer"],
-    ))
+    map_block = None
+    map_note = ""
+    if pack and lat is not None and lng is not None:
+        try:
+            from services import report_map
+            pts = cctv_service.find_nearby(float(lat), float(lng), radius_m=pack["cctv"]["radius_m"], limit=300) \
+                or pack["cctv"]["list"]
+            mres = report_map.render(float(lat), float(lng), pack["cctv"]["radius_m"], pts, font_path=_FONT_PATH)
+            MW = 84 * mm
+            map_block = [RLImage(io.BytesIO(mres["png"]), width=MW, height=MW * 560 / 760),
+                         P(f"<font color='#DC2626'>●</font> 도난 위치  <font color='#2563EB'>●</font> 공공 CCTV  "
+                           f"원: 반경 {pack['cctv']['radius_m']}m 내 {pack['cctv']['count']}개소", 7.5, SUB)]
+            map_note = mres["note"]
+        except Exception as e:  # noqa: BLE001
+            print(f"[112-pdf] 지도 생성 실패: {e!r}")
+            map_note = "지도 생성 실패"
+    story += [Spacer(1, 4 * mm)]
+    if map_block:
+        row = Table([[map_block, todo_block]], colWidths=[88 * mm, W - 88 * mm])
+        row.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (0, 0), 0),
+                                 ("LEFTPADDING", (1, 0), (1, 0), 4 * mm)]))
+        story.append(KeepTogether(row))
+    else:
+        story += todo_block
+    if map_note:
+        story.append(P(map_note, 7.5, RED))
 
-    doc.build(story)
+    # ── CCTV 열람 정보
+    if pack and pack["cctv"].get("agencies"):
+        c = pack["cctv"]
+        story += section("CCTV 열람 정보")
+        meta = [f"반경 {c['radius_m']}m 내 {c['count']}개소 · 카메라 {c['total_cameras']}대"]
+        if c.get("min_retention_days"):
+            meta.append(f"영상 보관 최단 {c['min_retention_days']}일")
+        if c.get("request_window"):
+            meta.append(f"요청 구간 {c['request_window']['from']} ~ {c['request_window']['to'][11:]}")
+        story.append(P(" · ".join(meta), 8.5, INK, space=1.5 * mm))
+        rows = [["관리기관", "연락처", "보유", "최단거리"]] + \
+               [[a["agency"][:26], a.get("tel") or "연락처 미등록", f"{a['count']}개소", f"{a['nearest_m']}m"]
+                for a in c["agencies"][:4]]
+        at = Table(rows, colWidths=[W * 0.44, W * 0.25, W * 0.14, W * 0.17])
+        at.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), PDF_FONT), ("FONTSIZE", (0, 0), (-1, -1), 8.5),
+            ("TEXTCOLOR", (0, 0), (-1, 0), SUB), ("LINEBELOW", (0, 0), (-1, 0), 0.6, INK),
+            ("LINEBELOW", (0, 1), (-1, -1), 0.3, LINE),
+            ("TOPPADDING", (0, 0), (-1, -1), 2.2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2.2),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
+        story.append(at)
+        story.append(P("영상 열람은 사건 접수 후 담당 수사관을 통해 요청합니다. 출처: 공공데이터포털 「전국 CCTV 표준데이터」",
+                       7.5, SUB, space=0))
+
+    # ── 중고마켓 의심 매물 (있을 때만)
+    if suspicious:
+        story += section(f"중고마켓 의심 매물 {len(suspicious)}건 (AI 추정)")
+        rows = [["플랫폼", "제목", "가격", "지역", "유사도"]] + [
+            [l.get("platform", ""), (l.get("title") or "")[:24], l.get("price", ""), l.get("location", ""),
+             f"{l.get('similarity', 0)}%"] for l in suspicious[:5]]
+        st_ = Table(rows, colWidths=[W * 0.13, W * 0.39, W * 0.13, W * 0.25, W * 0.10])
+        st_.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), PDF_FONT), ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("TEXTCOLOR", (0, 0), (-1, 0), SUB), ("LINEBELOW", (0, 0), (-1, 0), 0.6, INK),
+            ("LINEBELOW", (0, 1), (-1, -1), 0.3, LINE), ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
+        story.append(st_)
+
+    # ── 신고인 (입력된 값만)
+    rp = [(k, clean(reporter.get(f))) for k, f in (("성명", "name"), ("연락처", "phone"), ("주소", "address"))]
+    rp = [(k, v) for k, v in rp if v]
+    if rp:
+        story += section("신고인")
+        story.append(P("   ".join(f"<font color='#6B7280'>{k}</font>  {v}" for k, v in rp), 9.5, INK))
+
+    # ── 참고: 모니터링 지역
+    if pack and pack.get("search_areas"):
+        areas = ", ".join(a["area"] for a in pack["search_areas"][:3])
+        story += [Spacer(1, 4 * mm),
+                  P(f"중고마켓 모니터링 우선 지역: {areas} (경찰청 2024 시군구 절도 통계·거리 기반 상대 순위)", 7.5, SUB)]
+
+    # ── 바닥글: 본문 흐름과 분리해 매 쪽 하단에 고정 (본문이 밀려 바닥글만 2쪽에 남는 문제 방지)
+    foot1 = ("AI 도난탐정이 자동 작성한 참고 자료로 법적 효력이 없습니다. 중고 매물이 도난품인지는 경찰 확인 전 "
+             "단정하지 마세요. 신고 경로 출처: 양천구청 「도난자전거 신고방법」")
+    foot2 = f"AI 도난탐정 · 주식회사 무무익선 · {now.strftime('%Y-%m-%d %H:%M:%S')} 생성 · {report_id}"
+
+    def _footer(cv, dc):
+        cv.saveState()
+        x0, x1 = dc.leftMargin + 6, A4[0] - dc.rightMargin - 6
+        cv.setStrokeColor(LINE); cv.setLineWidth(0.4); cv.line(x0, 19 * mm, x1, 19 * mm)
+        cv.setFillColor(SUB); cv.setFont(PDF_FONT, 6.8)
+        cv.drawString(x0, 15 * mm, foot1)
+        cv.drawString(x0, 11.5 * mm, foot2)
+        if dc.page > 1:
+            cv.drawRightString(x1, 11.5 * mm, f"{dc.page}쪽")
+        cv.restoreState()
+
+    doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
     return buf.getvalue()
+
+
+def _photo_bytes(photos: list) -> list:
+    """data URL(base64) 사진 최대 3장 → (bytes, 가로, 세로). 장당 6MB 초과·해석 불가는 건너뛰고 로그를 남긴다."""
+    import base64
+    from reportlab.lib.utils import ImageReader
+    out = []
+    for i, p in enumerate(photos[:3]):
+        try:
+            b64 = p.split(",", 1)[1] if isinstance(p, str) and p.startswith("data:") else p
+            raw = base64.b64decode(b64)
+            if len(raw) > 6 * 1024 * 1024:
+                print(f"[112-pdf] 사진 {i + 1} 6MB 초과로 제외")
+                continue
+            iw, ih = ImageReader(io.BytesIO(raw)).getSize()
+            out.append((raw, iw, ih))
+        except Exception as e:  # noqa: BLE001
+            print(f"[112-pdf] 사진 {i + 1} 해석 실패: {e!r}")
+    return out
 
 
 def _decode_photos(photos: list) -> list:
@@ -1643,6 +1714,13 @@ async def terms():
     _path = os.path.join(os.path.dirname(__file__), "public", "terms.html")
     with open(_path, "r", encoding="utf-8") as f:
         return f.read()
+
+
+@app.get("/demo-bike.jpg")
+async def demo_bike_photo():
+    """시연용 예시 자전거 사진 (AI 생성 이미지, 실제 사건 사진 아님)"""
+    from fastapi.responses import FileResponse
+    return FileResponse(os.path.join(os.path.dirname(__file__), "public", "demo-bike.jpg"), media_type="image/jpeg")
 
 
 @app.get("/service", response_class=HTMLResponse)
